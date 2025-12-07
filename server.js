@@ -22,6 +22,7 @@ console.log('Email configured:', !!process.env.EMAIL_USER);
 const corsOptions = {
   origin: [
     'https://brand-monk.vercel.app',
+    'https://brand-monk-ga7q20shy-mukilans-projects.vercel.app',
     'http://localhost:3000',
     'http://localhost:5000',
     'http://127.0.0.1:3000'
