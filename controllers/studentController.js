@@ -319,6 +319,7 @@ const markInstagramFollowed = async (req, res) => {
 // @route   GET /api/students/:id
 // @access  Public
 const getStudentById = async (req, res) => {
+  console.log("GetStudentById Request ID:", req.params.id);
   try {
     let student = null;
     
