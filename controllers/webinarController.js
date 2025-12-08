@@ -74,6 +74,12 @@ const createWebinar = async (req, res) => {
       location: location?.trim() || 'Online',
       isActive: true,
       createdBy: createdBy || 'admin',
+      // Batch Details
+      batchCode: req.body.batchCode || '',
+      batchName: req.body.batchName || '',
+      trainer: req.body.trainer || '',
+      timing: req.body.timing || '',
+      studentLimit: req.body.studentLimit || 0,
       totalRegistrations: 0,
       createdAt: new Date()
     };
@@ -182,6 +188,12 @@ const getAllWebinars = async (req, res) => {
         date: w.date,
         location: w.location,
         isActive: w.isActive,
+        // Batch Details
+        batchCode: w.batchCode,
+        batchName: w.batchName,
+        trainer: w.trainer,
+        timing: w.timing,
+        studentLimit: w.studentLimit,
         totalRegistrations: w.totalRegistrations || 0,
         createdAt: w.createdAt,
         registrationLink: `${frontendUrl}/register/${slug}`
@@ -232,6 +244,7 @@ const getWebinarBySlug = async (req, res) => {
           _id: webinar._id,
           name: webinar.name,
           slug: webinar.slug,
+          type: webinar.type || 'Webinar',
           description: webinar.description,
           date: webinar.date,
           location: webinar.location

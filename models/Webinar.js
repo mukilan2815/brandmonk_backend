@@ -40,9 +40,34 @@ const webinarSchema = mongoose.Schema({
     type: String,
     required: true
   },
+  batchCode: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  batchName: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  trainer: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  timing: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  studentLimit: {
+    type: Number,
+    default: 0
+  },
   totalRegistrations: {
     type: Number,
     default: 0
+
   }
 }, {
   timestamps: true

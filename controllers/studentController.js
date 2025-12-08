@@ -86,7 +86,17 @@ const generateCertificateId = async () => {
 // @access  Public
 const registerStudent = async (req, res) => {
   console.log("Register Request:", req.body);
-  const { name, email, phone, webinarSlug, location, profession } = req.body;
+  const { 
+    name, 
+    email, 
+    phone, 
+    webinarSlug, 
+    location, 
+    profession,
+    collegeOrCompany,
+    department,
+    yearOfStudyOrExperience 
+  } = req.body;
 
   // Validate required fields
   if (!name || !email || !phone || !webinarSlug || !location || !profession) {
@@ -128,6 +138,9 @@ const registerStudent = async (req, res) => {
       webinarSlug: webinarSlug,
       location: location.trim(),
       profession,
+      collegeOrCompany: collegeOrCompany?.trim() || '',
+      department: department?.trim() || '',
+      yearOfStudyOrExperience: yearOfStudyOrExperience?.trim() || '',
       certificateId,
       isEligible: false,
       hasFollowedInstagram: false,

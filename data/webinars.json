@@ -8,7 +8,7 @@
     "location": "Online",
     "isActive": true,
     "createdBy": "admin",
-    "totalRegistrations": 1,
+    "totalRegistrations": 2,
     "createdAt": "2025-12-08T04:48:42.991Z",
     "_id": "1765169323009"
   },
@@ -24,5 +24,23 @@
     "totalRegistrations": 0,
     "createdAt": "2025-12-08T04:58:34.975Z",
     "_id": "1765169914992"
+  },
+  {
+    "name": "UI/UX",
+    "slug": "ui-ux-gegwjv8d",
+    "type": "Course",
+    "description": "UI/UX Batch - UI-001",
+    "date": "2025-12-09T00:00:00.000Z",
+    "location": "Chennai",
+    "isActive": true,
+    "createdBy": "admin",
+    "batchCode": "UI-001",
+    "batchName": "oct",
+    "trainer": "Mukilan T",
+    "timing": "10AM",
+    "studentLimit": 0,
+    "totalRegistrations": 3,
+    "createdAt": "2025-12-08T07:38:31.736Z",
+    "_id": "1765179511758"
   }
 ]

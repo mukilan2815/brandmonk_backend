@@ -41,6 +41,21 @@ const studentSchema = mongoose.Schema({
     required: true,
     enum: ['Student', 'Entrepreneur', 'Working Professional', 'Home Maker', 'Freelance', 'Others']
   },
+  collegeOrCompany: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  department: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  yearOfStudyOrExperience: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   certificateId: {
     type: String,
     unique: true
