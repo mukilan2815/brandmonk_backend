@@ -535,7 +535,7 @@ const sendCertificateEmail = async (req, res) => {
           <!-- ========== HERO IMAGE SECTION ========== -->
           <tr>
             <td style="padding:0;">
-              <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600&h=300&fit=crop&q=80" 
+              <img src="https://image.similarpng.com/file/similarpng/original-picture/2021/01/Colorful-confetti-celebration-on-transparent-background-PNG.png" 
                    alt="Celebration" 
                    style="width:100%; height:auto; display:block;">
             </td>
