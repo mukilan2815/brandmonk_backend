@@ -477,15 +477,15 @@ const sendCertificateEmail = async (req, res) => {
     // Configure email transporter
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // upgrade later with STARTTLS
+      port: 465,
+      secure: true, // Use SSL
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
       },
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 5000,
-      socketTimeout: 10000
+      connectionTimeout: 60000, // 60 seconds
+      greetingTimeout: 30000,
+      socketTimeout: 60000
     });
 
     // Create certificate download link
