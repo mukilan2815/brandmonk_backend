@@ -47,5 +47,34 @@
     "dateOfRegistration": "2025-12-07T14:30:47.451Z",
     "_id": "1765117847508",
     "certificateSentAt": "2025-12-07T14:34:58.222Z"
+  },
+  {
+    "name": "Ajeeth",
+    "email": "ajeeth511199@gmail.com",
+    "phone": "+917448359935",
+    "webinarName": "Video Editing",
+    "location": "Cbe",
+    "profession": "Student",
+    "certificateId": "SMAPARMQ076001",
+    "isEligible": true,
+    "hasFollowedInstagram": false,
+    "certificateSent": false,
+    "dateOfRegistration": "2025-12-08T05:07:59.366Z",
+    "_id": "1765170479396"
+  },
+  {
+    "name": "Mukilan T",
+    "email": "mukilan2808@gmail.com",
+    "phone": "+917448359935",
+    "webinarName": "Video Editing",
+    "location": "Coimbatore",
+    "profession": "Student",
+    "certificateId": "SMAPARMQ076001",
+    "isEligible": true,
+    "hasFollowedInstagram": false,
+    "certificateSent": true,
+    "dateOfRegistration": "2025-12-08T05:09:58.302Z",
+    "_id": "1765170598342",
+    "certificateSentAt": "2025-12-08T05:11:04.340Z"
   }
 ]

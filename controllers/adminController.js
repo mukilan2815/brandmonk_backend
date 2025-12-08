@@ -456,6 +456,20 @@ const sendCertificateEmail = async (req, res) => {
     console.log("Sending email to:", student.email);
     console.log("Using Resend API");
 
+    // Check if using Resend's testing domain (only allows sending to your own email)
+    // The test email registered with Resend - update this to your Resend account email
+    const RESEND_TEST_EMAIL = process.env.RESEND_TEST_EMAIL || 'mukilan2808@gmail.com';
+    const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    
+    // If using the default testing domain, warn about the limitation
+    if (FROM_EMAIL.includes('resend.dev') && student.email.toLowerCase() !== RESEND_TEST_EMAIL.toLowerCase()) {
+      console.warn("⚠️ Resend Test Mode: Can only send to", RESEND_TEST_EMAIL);
+      return res.status(400).json({ 
+        success: false, 
+        message: `⚠️ Resend Test Mode Active! You can only send test emails to ${RESEND_TEST_EMAIL}. To send emails to other recipients:\n\n1. Go to resend.com/domains\n2. Verify your domain (e.g., brandmonkacademy.com)\n3. Add RESEND_FROM_EMAIL=hello@yourdomain.com to your .env file`
+      });
+    }
+
     // Handle undefined values with fallbacks
     const webinarName = student.webinarName || 'Brand Monk Academy Program';
     const certificateId = student.certificateId || `BMA-${Date.now()}`;
@@ -479,7 +493,7 @@ const sendCertificateEmail = async (req, res) => {
 
     // Send email using Resend
     const { data: emailData, error } = await resend.emails.send({
-      from: 'Brand Monk Academy <onboarding@resend.dev>',
+      from: `Brand Monk Academy <${FROM_EMAIL}>`,
       to: [student.email],
       subject: `🎉 Congratulations! Your ${programType} Certificate is Ready | Brand Monk Academy`,
       html: `
@@ -488,194 +502,279 @@ const sendCertificateEmail = async (req, res) => {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
-<body style="margin:0; padding:0; background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%); font-family:'Inter', 'Segoe UI', Arial, sans-serif;">
+<body style="margin:0; padding:0; background:#f5f5f5; font-family:'Poppins', 'Segoe UI', Arial, sans-serif;">
   
-  <!-- Confetti decoration -->
-  <div style="position:absolute; width:100%; height:200px; overflow:hidden; pointer-events:none;">
-    <div style="position:absolute; top:20px; left:10%; font-size:24px;">🎊</div>
-    <div style="position:absolute; top:40px; left:25%; font-size:18px;">✨</div>
-    <div style="position:absolute; top:15px; left:45%; font-size:20px;">🌟</div>
-    <div style="position:absolute; top:35px; left:65%; font-size:22px;">🎉</div>
-    <div style="position:absolute; top:25px; left:85%; font-size:18px;">⭐</div>
-  </div>
-
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;">
     <tr>
-      <td align="center">
+      <td align="center" style="padding:20px;">
         
         <!-- Main Container -->
-        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:24px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.4);">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:0; overflow:hidden;">
 
-          <!-- Premium Gradient Header -->
+          <!-- ========== WHITE HEADER WITH LOGO & DATE ========== -->
           <tr>
-            <td style="background:linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); padding:40px 40px 50px; text-align:center; position:relative;">
+            <td style="background:#ffffff; padding:20px 30px; border-bottom:1px solid #eee;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="left" style="width:50%;">
+                    <img src="https://brandmonkacademy.com/wp-content/uploads/2023/09/cropped-BMA-Logo-01-01-768x228-1.png"
+                         alt="Brand Monk Academy" 
+                         style="height:40px; width:auto;">
+                  </td>
+                  <td align="right" style="width:50%; font-size:13px; color:#666;">
+                    ${issueDate}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ========== HERO IMAGE SECTION ========== -->
+          <tr>
+            <td style="padding:0;">
+              <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600&h=300&fit=crop&q=80" 
+                   alt="Celebration" 
+                   style="width:100%; height:auto; display:block;">
+            </td>
+          </tr>
+
+          <!-- ========== TEAL GRADIENT BANNER ========== -->
+          <tr>
+            <td style="background:linear-gradient(135deg, #0d9488 0%, #14b8a6 50%, #2dd4bf 100%); padding:40px 35px; text-align:center;">
               
-              <!-- Logo -->
-              <img src="https://brandmonkacademy.com/wp-content/uploads/2023/09/cropped-BMA-Logo-01-01-768x228-1.png"
-                   alt="Brand Monk Academy" 
-                   style="width:160px; margin-bottom:25px; filter: brightness(0) invert(1);">
-              
-              <!-- Celebration Badge -->
-              <div style="margin:0 auto 20px; width:100px; height:100px; background:linear-gradient(145deg, #ffd700, #ffb347, #ffd700); border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 30px rgba(255,215,0,0.4);">
-                <span style="font-size:50px;">🏆</span>
-              </div>
-              
-              <!-- Main Title -->
-              <h1 style="margin:0; font-family:'Playfair Display', Georgia, serif; font-size:32px; color:#ffffff; font-weight:700; letter-spacing:-0.5px; text-shadow:0 2px 10px rgba(0,0,0,0.2);">
-                Congratulations!
+              <h1 style="margin:0 0 15px; font-size:28px; color:#ffffff; font-weight:700; letter-spacing:-0.5px;">
+                🎉 Certificate of Completion
               </h1>
-              <p style="margin:12px 0 0; font-size:16px; color:rgba(255,255,255,0.9); font-weight:500;">
-                Your achievement is now certified
+              
+              <p style="margin:0 0 25px; font-size:14px; color:rgba(255,255,255,0.9); line-height:1.7; max-width:480px; margin-left:auto; margin-right:auto;">
+                Congratulations <strong>${studentName}</strong>! You have successfully completed the <strong>${webinarName}</strong> ${programType.toLowerCase()}. Your dedication to learning and growth is truly commendable.
               </p>
-            </td>
-          </tr>
-
-          <!-- Personal Greeting -->
-          <tr>
-            <td style="padding:45px 45px 25px; text-align:center;">
-              <p style="margin:0; font-size:18px; color:#374151; line-height:1.6;">
-                Dear <strong style="color:#6366f1; font-weight:700;">${studentName}</strong>,
-              </p>
-              <p style="margin:15px 0 0; font-size:15px; color:#6b7280; line-height:1.8; max-width:450px; margin-left:auto; margin-right:auto;">
-                We are thrilled to recognize your dedication and successful completion of the ${programType.toLowerCase()}. Your commitment to learning is truly inspiring!
-              </p>
-            </td>
-          </tr>
-
-          <!-- Certificate Card with Gradient Border -->
-          <tr>
-            <td style="padding:0 35px 35px;">
-              <div style="background:linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7); padding:3px; border-radius:20px;">
-                <div style="background:#fefefe; border-radius:18px; padding:30px; text-align:center;">
-                  
-                  <!-- Program Label -->
-                  <div style="display:inline-block; background:linear-gradient(135deg, #fef3c7, #fde68a); padding:6px 16px; border-radius:20px; margin-bottom:15px;">
-                    <span style="font-size:11px; color:#92400e; font-weight:600; text-transform:uppercase; letter-spacing:1.5px;">
-                      ${programType} Completed
-                    </span>
-                  </div>
-                  
-                  <!-- Program Name -->
-                  <h2 style="margin:0 0 25px; font-family:'Playfair Display', Georgia, serif; font-size:24px; color:#1e1b4b; font-weight:700; line-height:1.3;">
-                    ${webinarName}
-                  </h2>
-                  
-                  <!-- Certificate Details -->
-                  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc; border-radius:12px; overflow:hidden;">
-                    <tr>
-                      <td style="padding:20px; border-bottom:1px solid #e2e8f0;" width="50%">
-                        <p style="margin:0 0 5px; font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Certificate ID</p>
-                        <p style="margin:0; font-size:14px; color:#1e293b; font-family:'Courier New', monospace; font-weight:700; background:linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
-                          ${certificateId}
-                        </p>
-                      </td>
-                      <td style="padding:20px; border-bottom:1px solid #e2e8f0; border-left:1px solid #e2e8f0;" width="50%">
-                        <p style="margin:0 0 5px; font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Issue Date</p>
-                        <p style="margin:0; font-size:14px; color:#1e293b; font-weight:600;">
-                          ${issueDate}
-                        </p>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td colspan="2" style="padding:20px; text-align:center;">
-                        <p style="margin:0 0 5px; font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Issued By</p>
-                        <p style="margin:0; font-size:14px; color:#1e293b; font-weight:600;">Brand Monk Academy</p>
-                      </td>
-                    </tr>
-                  </table>
-                </div>
-              </div>
-            </td>
-          </tr>
-
-          <!-- CTA Button -->
-          <tr>
-            <td style="padding:0 45px 20px;" align="center">
+              
               <a href="${certificateUrl}" 
                  style="
-                   background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
-                   color:#fff; 
-                   text-decoration:none; 
-                   padding:18px 50px; 
-                   font-size:16px; 
-                   border-radius:50px; 
-                   font-weight:700;
                    display:inline-block;
-                   box-shadow:0 10px 25px -5px rgba(99, 102, 241, 0.5);
-                   letter-spacing:0.5px;
+                   background:#fbbf24;
+                   color:#1f2937;
+                   text-decoration:none;
+                   padding:14px 35px;
+                   font-size:14px;
+                   font-weight:600;
+                   border-radius:30px;
+                   box-shadow:0 4px 15px rgba(251,191,36,0.4);
                  ">
-                 ⬇️ Download Your Certificate
+                Download Certificate
               </a>
             </td>
           </tr>
-          
-          <!-- Verify Link -->
+
+          <!-- ========== SECTION 1: TEXT LEFT, IMAGE RIGHT ========== -->
           <tr>
-            <td style="padding:0 45px 35px;" align="center">
-              <p style="margin:0; font-size:13px; color:#94a3b8;">
-                Verify authenticity: 
-                <a href="${verifyUrl}" style="color:#6366f1; text-decoration:none; font-weight:500;">${verifyUrl}</a>
-              </p>
+            <td style="background:#fef9c3; padding:0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="50%" style="padding:35px 25px 35px 35px; vertical-align:middle;">
+                    <h2 style="margin:0 0 12px; font-size:20px; color:#1f2937; font-weight:700;">
+                      Your Achievement
+                    </h2>
+                    <p style="margin:0 0 8px; font-size:13px; color:#1f2937; font-weight:600;">
+                      Certificate ID: <span style="color:#0d9488;">${certificateId}</span>
+                    </p>
+                    <p style="margin:0 0 20px; font-size:13px; color:#6b7280; line-height:1.6;">
+                      This certificate validates your successful completion of the program conducted by Brand Monk Academy.
+                    </p>
+                    <a href="${verifyUrl}" 
+                       style="
+                         display:inline-block;
+                         background:#10b981;
+                         color:#ffffff;
+                         text-decoration:none;
+                         padding:12px 28px;
+                         font-size:13px;
+                         font-weight:600;
+                         border-radius:25px;
+                       ">
+                      Verify Certificate
+                    </a>
+                  </td>
+                  <td width="50%" style="padding:0; vertical-align:middle;">
+                    <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=300&h=220&fit=crop&q=80" 
+                         alt="Achievement" 
+                         style="width:100%; height:auto; display:block;">
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
-          <!-- Social Proof / What's Next -->
+          <!-- ========== SECTION 2: IMAGE LEFT, TEXT RIGHT ========== -->
           <tr>
-            <td style="padding:0 45px 35px;">
-              <div style="background:#f0fdf4; border-left:4px solid #22c55e; padding:20px 25px; border-radius:0 12px 12px 0;">
-                <p style="margin:0 0 8px; font-size:14px; color:#166534; font-weight:600;">🚀 What's Next?</p>
-                <p style="margin:0; font-size:13px; color:#4ade80; line-height:1.6;">
-                  Share your achievement on LinkedIn and tag us! Keep learning and growing with more courses from Brand Monk Academy.
-                </p>
-              </div>
+            <td style="background:#fef9c3; padding:0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="50%" style="padding:0; vertical-align:middle;">
+                    <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=300&h=220&fit=crop&q=80" 
+                         alt="Learning" 
+                         style="width:100%; height:auto; display:block;">
+                  </td>
+                  <td width="50%" style="padding:35px 35px 35px 25px; vertical-align:middle;">
+                    <h2 style="margin:0 0 12px; font-size:20px; color:#1f2937; font-weight:700;">
+                      Program Details
+                    </h2>
+                    <p style="margin:0 0 8px; font-size:13px; color:#1f2937; font-weight:600;">
+                      ${webinarName}
+                    </p>
+                    <p style="margin:0 0 20px; font-size:13px; color:#6b7280; line-height:1.6;">
+                      Issued on ${issueDate} by Brand Monk Academy. Share your achievement with the world!
+                    </p>
+                    <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(certificateUrl)}" 
+                       style="
+                         display:inline-block;
+                         background:#10b981;
+                         color:#ffffff;
+                         text-decoration:none;
+                         padding:12px 28px;
+                         font-size:13px;
+                         font-weight:600;
+                         border-radius:25px;
+                       ">
+                      Share on LinkedIn
+                    </a>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
-          <!-- Premium Dark Footer -->
+          <!-- ========== THREE COLUMN GRID: "WHAT'S NEXT" ========== -->
           <tr>
-            <td style="background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); padding:40px 45px;" align="center">
+            <td style="background:#ffffff; padding:40px 25px;">
               
-              <!-- Footer Logo -->
-              <img src="https://brandmonkacademy.com/wp-content/uploads/2023/09/cropped-BMA-Logo-01-01-768x228-1.png"
-                   alt="Brand Monk Academy" 
-                   style="width:120px; margin-bottom:20px; opacity:0.9; filter: brightness(0) invert(1);">
+              <h2 style="margin:0 0 30px; font-size:22px; color:#0d9488; font-weight:700; text-align:center;">
+                What's Next For You
+              </h2>
               
-              <p style="margin:0 0 8px; font-size:13px; color:rgba(255,255,255,0.7); font-weight:500;">
-                Empowering Minds. Shaping Futures.
-              </p>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <!-- Card 1 -->
+                  <td width="33%" style="padding:0 8px; vertical-align:top; text-align:center;">
+                    <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=180&h=120&fit=crop&q=80" 
+                         alt="Keep Learning" 
+                         style="width:100%; height:auto; border-radius:8px; margin-bottom:12px;">
+                    <p style="margin:0 0 5px; font-size:13px; color:#f97316; font-weight:600;">
+                      Keep Learning
+                    </p>
+                    <p style="margin:0 0 12px; font-size:11px; color:#6b7280; line-height:1.5;">
+                      Explore more courses and webinars to expand your skills
+                    </p>
+                    <a href="https://brandmonkacademy.com" 
+                       style="
+                         display:inline-block;
+                         background:#10b981;
+                         color:#ffffff;
+                         text-decoration:none;
+                         padding:10px 20px;
+                         font-size:12px;
+                         font-weight:600;
+                         border-radius:20px;
+                       ">
+                      Explore Courses
+                    </a>
+                  </td>
+                  
+                  <!-- Card 2 -->
+                  <td width="33%" style="padding:0 8px; vertical-align:top; text-align:center;">
+                    <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?w=180&h=120&fit=crop&q=80" 
+                         alt="Join Community" 
+                         style="width:100%; height:auto; border-radius:8px; margin-bottom:12px;">
+                    <p style="margin:0 0 5px; font-size:13px; color:#f97316; font-weight:600;">
+                      Join Our Community
+                    </p>
+                    <p style="margin:0 0 12px; font-size:11px; color:#6b7280; line-height:1.5;">
+                      Connect with fellow learners and industry experts
+                    </p>
+                    <a href="https://instagram.com/brandmonkacademy" 
+                       style="
+                         display:inline-block;
+                         background:#10b981;
+                         color:#ffffff;
+                         text-decoration:none;
+                         padding:10px 20px;
+                         font-size:12px;
+                         font-weight:600;
+                         border-radius:20px;
+                       ">
+                      Follow Us
+                    </a>
+                  </td>
+                  
+                  <!-- Card 3 -->
+                  <td width="33%" style="padding:0 8px; vertical-align:top; text-align:center;">
+                    <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=180&h=120&fit=crop&q=80" 
+                         alt="Get Certified" 
+                         style="width:100%; height:auto; border-radius:8px; margin-bottom:12px;">
+                    <p style="margin:0 0 5px; font-size:13px; color:#f97316; font-weight:600;">
+                      Showcase Your Skills
+                    </p>
+                    <p style="margin:0 0 12px; font-size:11px; color:#6b7280; line-height:1.5;">
+                      Add this certificate to your LinkedIn profile
+                    </p>
+                    <a href="${certificateUrl}" 
+                       style="
+                         display:inline-block;
+                         background:#10b981;
+                         color:#ffffff;
+                         text-decoration:none;
+                         padding:10px 20px;
+                         font-size:12px;
+                         font-weight:600;
+                         border-radius:20px;
+                       ">
+                      Download Now
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ========== FOOTER WITH SOCIAL ICONS ========== -->
+          <tr>
+            <td style="background:#f3f4f6; padding:30px 35px; text-align:center;">
               
-              <!-- Social Icons Placeholder -->
-              <div style="margin:20px 0;">
-                <a href="#" style="display:inline-block; margin:0 8px; width:36px; height:36px; background:rgba(255,255,255,0.1); border-radius:50%; line-height:36px; text-align:center; text-decoration:none;">
-                  <span style="color:#fff; font-size:16px;">📸</span>
+              <!-- Social Icons -->
+              <div style="margin-bottom:20px;">
+                <a href="https://instagram.com/brandmonkacademy" style="display:inline-block; margin:0 8px; text-decoration:none;">
+                  <div style="width:36px; height:36px; border:1px solid #9ca3af; border-radius:50%; line-height:36px; text-align:center;">
+                    <span style="color:#6b7280; font-size:16px;">�</span>
+                  </div>
                 </a>
-                <a href="#" style="display:inline-block; margin:0 8px; width:36px; height:36px; background:rgba(255,255,255,0.1); border-radius:50%; line-height:36px; text-align:center; text-decoration:none;">
-                  <span style="color:#fff; font-size:16px;">💼</span>
+                <a href="https://twitter.com/brandmonk" style="display:inline-block; margin:0 8px; text-decoration:none;">
+                  <div style="width:36px; height:36px; border:1px solid #9ca3af; border-radius:50%; line-height:36px; text-align:center;">
+                    <span style="color:#6b7280; font-size:16px;">�</span>
+                  </div>
                 </a>
-                <a href="#" style="display:inline-block; margin:0 8px; width:36px; height:36px; background:rgba(255,255,255,0.1); border-radius:50%; line-height:36px; text-align:center; text-decoration:none;">
-                  <span style="color:#fff; font-size:16px;">🌐</span>
+                <a href="https://brandmonkacademy.com" style="display:inline-block; margin:0 8px; text-decoration:none;">
+                  <div style="width:36px; height:36px; border:1px solid #9ca3af; border-radius:50%; line-height:36px; text-align:center;">
+                    <span style="color:#6b7280; font-size:16px;">🌐</span>
+                  </div>
                 </a>
               </div>
               
-              <p style="margin:0; font-size:11px; color:rgba(255,255,255,0.4);">
+              <p style="margin:0 0 10px; font-size:11px; color:#9ca3af; line-height:1.6; max-width:400px; margin-left:auto; margin-right:auto;">
+                You are receiving this email because you completed a program at Brand Monk Academy. Make sure our messages get to your inbox.
+              </p>
+              
+              <p style="margin:0; font-size:10px; color:#9ca3af;">
                 © ${new Date().getFullYear()} Brand Monk Academy. All rights reserved.
-              </p>
-              <p style="margin:8px 0 0; font-size:10px; color:rgba(255,255,255,0.3);">
-                This email was sent to ${student.email}
               </p>
             </td>
           </tr>
 
         </table>
         
-        <!-- Bottom Tagline -->
-        <p style="margin:30px 0 0; font-size:12px; color:rgba(255,255,255,0.5); text-align:center;">
-          Made with ❤️ by Brand Monk Academy
-        </p>
-
       </td>
     </tr>
   </table>
