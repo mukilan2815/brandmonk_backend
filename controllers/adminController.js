@@ -1,6 +1,6 @@
 const Student = require('../models/Student');
 const Admin = require('../models/Admin');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const fs = require('fs');
 const path = require('path');
 
@@ -412,12 +412,12 @@ const sendCertificateEmail = async (req, res) => {
   const studentId = req.params.id;
   console.log("Send Certificate Email:", studentId);
 
-  // Check if email is configured
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.error("Email not configured! Set EMAIL_USER and EMAIL_PASS in .env");
+  // Check if Resend API key is configured
+  if (!process.env.RESEND_API_KEY) {
+    console.error("Resend not configured! Set RESEND_API_KEY in .env");
     return res.status(500).json({
       success: false,
-      message: 'Email not configured. Please set EMAIL_USER and EMAIL_PASS in .env file. Use Gmail App Password for EMAIL_PASS.'
+      message: 'Email service not configured. Please set RESEND_API_KEY in environment variables.'
     });
   }
 
@@ -454,7 +454,7 @@ const sendCertificateEmail = async (req, res) => {
     }
 
     console.log("Sending email to:", student.email);
-    console.log("Using email account:", process.env.EMAIL_USER);
+    console.log("Using Resend API");
 
     // Handle undefined values with fallbacks
     const webinarName = student.webinarName || 'Brand Monk Academy Program';
@@ -462,11 +462,7 @@ const sendCertificateEmail = async (req, res) => {
     const studentName = student.name || 'Participant';
     
     // Determine program type (Course vs Webinar)
-    // You might need to fetch the webinar details if 'type' isn't stored on student
-    // For now, let's assume if it's not explicitly a webinar, we check the name or default
     const programType = (student.webinarName && student.webinarName.toLowerCase().includes('course')) ? 'Course' : 'Webinar';
-    // Ideally, we should fetch the webinar object to overlap with the schema 'type', but this is a quick heuristic if 'type' isn't on student.
-    // If you added 'type' to Student schema, use student.type || ...
 
     const issueDate = new Date().toLocaleDateString('en-IN', {
       year: 'numeric',
@@ -474,27 +470,17 @@ const sendCertificateEmail = async (req, res) => {
       day: 'numeric'
     });
 
-    // Configure email transporter
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true, // Use SSL
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      },
-      connectionTimeout: 60000, // 60 seconds
-      greetingTimeout: 30000,
-      socketTimeout: 60000
-    });
+    // Initialize Resend client
+    const resend = new Resend(process.env.RESEND_API_KEY);
 
     // Create certificate download link
     const certificateUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/certificate/${student._id}`;
     const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify/${student._id}`;
 
-    const mailOptions = {
-      from: `"Brand Monk Academy" <${process.env.EMAIL_USER}>`,
-      to: student.email,
+    // Send email using Resend
+    const { data: emailData, error } = await resend.emails.send({
+      from: 'Brand Monk Academy <onboarding@resend.dev>',
+      to: [student.email],
       subject: `Your ${programType} Certificate is Ready - ${webinarName} | Brand Monk Academy`,
       html: `
 <!DOCTYPE html>
@@ -647,10 +633,17 @@ const sendCertificateEmail = async (req, res) => {
 </body>
 </html>
       `
-    };
+    });
 
-    await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully to:", student.email);
+    if (error) {
+      console.error("Resend Error:", error);
+      return res.status(500).json({ 
+        success: false, 
+        message: `Email error: ${error.message}` 
+      });
+    }
+
+    console.log("Email sent successfully to:", student.email, "ID:", emailData?.id);
 
     // Update certificate sent status
     try {
@@ -680,13 +673,8 @@ const sendCertificateEmail = async (req, res) => {
   } catch (error) {
     console.error("SendCertificateEmail Error:", error);
     
-    // Provide helpful error messages
     let errorMessage = 'Failed to send email.';
-    if (error.code === 'EAUTH') {
-      errorMessage = 'Gmail authentication failed. Make sure you are using a Gmail App Password (not your regular password). Go to Google Account > Security > 2-Step Verification > App passwords.';
-    } else if (error.code === 'ESOCKET') {
-      errorMessage = 'Network error. Check your internet connection.';
-    } else if (error.message) {
+    if (error.message) {
       errorMessage = `Email error: ${error.message}`;
     }
     
