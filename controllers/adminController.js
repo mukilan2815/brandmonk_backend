@@ -532,14 +532,7 @@ const sendCertificateEmail = async (req, res) => {
             </td>
           </tr>
 
-          <!-- ========== HERO IMAGE SECTION ========== -->
-          <tr>
-            <td style="padding:0;">
-              <img src="https://image.similarpng.com/file/similarpng/original-picture/2021/01/Colorful-confetti-celebration-on-transparent-background-PNG.png" 
-                   alt="Celebration" 
-                   style="width:100%; height:auto; display:block;">
-            </td>
-          </tr>
+          
 
           <!-- ========== TEAL GRADIENT BANNER ========== -->
           <tr>
