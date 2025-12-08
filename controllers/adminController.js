@@ -522,7 +522,7 @@ const sendCertificateEmail = async (req, res) => {
                   <td align="left" style="width:50%;">
                     <img src="https://brandmonkacademy.com/wp-content/uploads/2023/09/cropped-BMA-Logo-01-01-768x228-1.png"
                          alt="Brand Monk Academy" 
-                         style="height:40px; width:auto;">
+                         style="height:80px; width:auto;">
                   </td>
                   <td align="right" style="width:50%; font-size:13px; color:#666;">
                     ${issueDate}
@@ -532,7 +532,6 @@ const sendCertificateEmail = async (req, res) => {
             </td>
           </tr>
 
-          
 
           <!-- ========== TEAL GRADIENT BANNER ========== -->
           <tr>
