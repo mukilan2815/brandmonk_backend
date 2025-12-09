@@ -8,7 +8,8 @@ const {
   deleteStudent, 
   toggleEligibility, 
   sendCertificateEmail,
-  getDashboardStats
+  getDashboardStats,
+  bulkImportStudents
 } = require('../controllers/adminController');
 
 // Admin login
@@ -19,6 +20,9 @@ router.get('/students', getAllStudents);
 
 // Create student (Chennai admin can add)
 router.post('/students', createStudent);
+
+// Bulk import students from XLSX
+router.post('/students/bulk-import', bulkImportStudents);
 
 // Update student (Chennai admin can edit)
 router.put('/students/:id', updateStudent);

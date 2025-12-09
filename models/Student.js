@@ -85,13 +85,12 @@ const studentSchema = mongoose.Schema({
 });
 
 // Pre-save middleware to generate certificate ID
-studentSchema.pre('save', async function(next) {
+studentSchema.pre('save', async function() {
   if (!this.certificateId) {
     const count = await mongoose.model('Student').countDocuments();
     const sequenceNumber = (count + 1).toString().padStart(3, '0');
     this.certificateId = `SMAPARMQ076${sequenceNumber}`;
   }
-  next();
 });
 
 const Student = mongoose.model('Student', studentSchema);

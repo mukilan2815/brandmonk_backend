@@ -1,82 +1,9 @@
 const Student = require('../models/Student');
 const Webinar = require('../models/Webinar');
-const fs = require('fs');
-const path = require('path');
-
-const DATA_FILE = path.join(__dirname, '../data/students.json');
-const WEBINAR_FILE = path.join(__dirname, '../data/webinars.json');
-
-// Helper to ensure data directory exists
-const ensureDataDir = () => {
-  const dataDir = path.dirname(DATA_FILE);
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-};
-
-// Helper to read data
-const readData = () => {
-  try {
-    ensureDataDir();
-    if (!fs.existsSync(DATA_FILE)) {
-      fs.writeFileSync(DATA_FILE, '[]');
-      return [];
-    }
-    const data = fs.readFileSync(DATA_FILE, 'utf8');
-    return JSON.parse(data || '[]');
-  } catch (err) {
-    console.error("Error reading data file:", err);
-    return [];
-  }
-};
-
-// Helper to write data
-const writeData = (data) => {
-  try {
-    ensureDataDir();
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-  } catch (err) {
-    console.error("Error writing data file:", err);
-  }
-};
-
-// Read webinars data
-const readWebinars = () => {
-  try {
-    if (!fs.existsSync(WEBINAR_FILE)) {
-      return [];
-    }
-    const data = fs.readFileSync(WEBINAR_FILE, 'utf8');
-    return JSON.parse(data || '[]');
-  } catch (err) {
-    console.error("Error reading webinars file:", err);
-    return [];
-  }
-};
-
-// Update webinar registration count
-const updateWebinarCount = (slug) => {
-  try {
-    const data = readWebinars();
-    const index = data.findIndex(w => w.slug === slug);
-    if (index !== -1) {
-      data[index].totalRegistrations = (data[index].totalRegistrations || 0) + 1;
-      fs.writeFileSync(WEBINAR_FILE, JSON.stringify(data, null, 2));
-    }
-  } catch (err) {
-    console.error("Error updating webinar count:", err);
-  }
-};
 
 // Generate certificate ID
 const generateCertificateId = async () => {
-  let count = 0;
-  try {
-    count = await Student.countDocuments();
-  } catch (e) {
-    const fileData = readData();
-    count = fileData.length;
-  }
+  const count = await Student.countDocuments();
   const sequenceNumber = (count + 1).toString().padStart(3, '0');
   return `SMAPARMQ076${sequenceNumber}`;
 };
@@ -108,17 +35,7 @@ const registerStudent = async (req, res) => {
 
   try {
     // Get webinar details from slug
-    let webinar = null;
-    try {
-      webinar = await Webinar.findOne({ slug: webinarSlug, isActive: true });
-    } catch (e) {
-      console.log("MongoDB webinar lookup failed, trying file:", e.message);
-    }
-
-    if (!webinar) {
-      const webinars = readWebinars();
-      webinar = webinars.find(w => w.slug === webinarSlug && w.isActive);
-    }
+    const webinar = await Webinar.findOne({ slug: webinarSlug, isActive: true });
 
     if (!webinar) {
       return res.status(404).json({
@@ -148,45 +65,18 @@ const registerStudent = async (req, res) => {
       dateOfRegistration: new Date()
     };
 
-    let savedStudent;
-
-    // Try MongoDB first
-    try {
-      const student = new Student({
-        ...studentData,
-        certificateId: undefined // Let pre-save hook generate it
-      });
-      savedStudent = await student.save();
-      
-      // Update webinar count
-      try {
-        await Webinar.findByIdAndUpdate(webinar._id, {
-          $inc: { totalRegistrations: 1 }
-        });
-      } catch (e) {
-        console.error("Failed to update webinar count in MongoDB:", e.message);
-      }
-      
-      // Backup to file
-      const currentData = readData();
-      writeData([...currentData, { ...savedStudent._doc }]);
-      
-      console.log("Student Registered via MongoDB:", savedStudent._id);
-    } catch (dbError) {
-      console.error("MongoDB failed, using local file storage:", dbError.message);
-      
-      // Fallback to file storage
-      studentData._id = Date.now().toString();
-      studentData.createdAt = new Date().toISOString(); // Explicitly set createdAt
-      const currentData = readData();
-      writeData([...currentData, studentData]);
-      savedStudent = studentData;
-      
-      // Update webinar count in file
-      updateWebinarCount(webinarSlug);
-      
-      console.log("Student Registered via Local File:", savedStudent._id);
-    }
+    const student = new Student({
+      ...studentData,
+      certificateId: undefined // Let pre-save hook generate it
+    });
+    const savedStudent = await student.save();
+    
+    // Update webinar count
+    await Webinar.findByIdAndUpdate(webinar._id, {
+      $inc: { totalRegistrations: 1 }
+    });
+    
+    console.log("Student Registered:", savedStudent._id);
 
     res.status(201).json({
       success: true,
@@ -218,25 +108,10 @@ const verifyStudentEmail = async (req, res) => {
   try {
     let student = null;
     
-    // Try MongoDB first
-    try {
-      if (email) {
-        student = await Student.findOne({ email: email.trim().toLowerCase() });
-      } else if (certificateId) {
-        student = await Student.findOne({ certificateId });
-      }
-    } catch (e) {
-      console.error("MongoDB Verify Error:", e.message);
-    }
-
-    // Fallback to file
-    if (!student) {
-      const data = readData();
-      if (email) {
-        student = data.find(s => s.email.toLowerCase() === email.trim().toLowerCase());
-      } else if (certificateId) {
-        student = data.find(s => s.certificateId === certificateId);
-      }
+    if (email) {
+      student = await Student.findOne({ email: email.trim().toLowerCase() });
+    } else if (certificateId) {
+      student = await Student.findOne({ certificateId });
     }
 
     if (student) {
@@ -275,32 +150,11 @@ const markInstagramFollowed = async (req, res) => {
   console.log("Instagram Verified Request:", studentId);
 
   try {
-    let student = null;
-
-    // Try MongoDB first
-    try {
-      if (studentId.match(/^[0-9a-fA-F]{24}$/)) {
-        student = await Student.findByIdAndUpdate(
-          studentId,
-          { hasFollowedInstagram: true },
-          { new: true }
-        );
-      }
-    } catch (e) {
-      console.error("MongoDB Instagram Update Error:", e.message);
-    }
-
-    // Fallback to file
-    if (!student) {
-      const data = readData();
-      const index = data.findIndex(s => s._id === studentId || s._id.toString() === studentId);
-      
-      if (index !== -1) {
-        data[index].hasFollowedInstagram = true;
-        writeData(data);
-        student = data[index];
-      }
-    }
+    const student = await Student.findByIdAndUpdate(
+      studentId,
+      { hasFollowedInstagram: true },
+      { new: true }
+    );
 
     if (student) {
       res.json({
@@ -334,22 +188,7 @@ const markInstagramFollowed = async (req, res) => {
 const getStudentById = async (req, res) => {
   console.log("GetStudentById Request ID:", req.params.id);
   try {
-    let student = null;
-    
-    // Try MongoDB first
-    try {
-      if (req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
-        student = await Student.findById(req.params.id);
-      }
-    } catch (e) {
-      console.error("MongoDB GetById Error:", e.message);
-    }
-
-    // Fallback to file
-    if (!student) {
-      const data = readData();
-      student = data.find(s => s._id === req.params.id || s._id.toString() === req.params.id);
-    }
+    const student = await Student.findById(req.params.id);
 
     if (student) {
       res.json({

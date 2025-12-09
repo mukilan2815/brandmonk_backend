@@ -1,42 +1,4 @@
 const Webinar = require('../models/Webinar');
-const fs = require('fs');
-const path = require('path');
-
-const DATA_FILE = path.join(__dirname, '../data/webinars.json');
-
-// Helper to ensure data directory exists
-const ensureDataDir = () => {
-  const dataDir = path.dirname(DATA_FILE);
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-};
-
-// Helper to read data
-const readData = () => {
-  try {
-    ensureDataDir();
-    if (!fs.existsSync(DATA_FILE)) {
-      fs.writeFileSync(DATA_FILE, '[]');
-      return [];
-    }
-    const data = fs.readFileSync(DATA_FILE, 'utf8');
-    return JSON.parse(data || '[]');
-  } catch (err) {
-    console.error("Error reading webinars file:", err);
-    return [];
-  }
-};
-
-// Helper to write data
-const writeData = (data) => {
-  try {
-    ensureDataDir();
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-  } catch (err) {
-    console.error("Error writing webinars file:", err);
-  }
-};
 
 // Generate unique slug
 const generateSlug = (name) => {
@@ -67,14 +29,13 @@ const createWebinar = async (req, res) => {
     
     const webinarData = {
       name: name.trim(),
-      slug: slug, // Always set the slug
+      slug: slug,
       type: req.body.type || 'Webinar',
       description: description?.trim() || '',
       date: new Date(date),
       location: location?.trim() || 'Online',
       isActive: true,
       createdBy: createdBy || 'admin',
-      // Batch Details
       batchCode: req.body.batchCode || '',
       batchName: req.body.batchName || '',
       trainer: req.body.trainer || '',
@@ -84,44 +45,13 @@ const createWebinar = async (req, res) => {
       createdAt: new Date()
     };
 
-    let savedWebinar;
+    const webinar = new Webinar(webinarData);
+    const savedWebinar = await webinar.save();
+    
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-
-    // Try MongoDB first
-    try {
-      const webinar = new Webinar(webinarData);
-      savedWebinar = await webinar.save();
-      
-      // Backup to file
-      const currentData = readData();
-      writeData([...currentData, { 
-        _id: savedWebinar._id.toString(),
-        name: savedWebinar.name,
-        slug: savedWebinar.slug,
-        type: savedWebinar.type,
-        description: savedWebinar.description,
-        date: savedWebinar.date,
-        location: savedWebinar.location,
-        isActive: savedWebinar.isActive,
-        createdBy: savedWebinar.createdBy,
-        totalRegistrations: savedWebinar.totalRegistrations,
-        createdAt: savedWebinar.createdAt
-      }]);
-      
-      console.log("Webinar Created via MongoDB:", savedWebinar._id, "Slug:", savedWebinar.slug);
-    } catch (dbError) {
-      console.error("MongoDB failed, using local file storage:", dbError.message);
-      
-      // Fallback to file storage
-      webinarData._id = Date.now().toString();
-      const currentData = readData();
-      writeData([...currentData, webinarData]);
-      savedWebinar = webinarData;
-      
-      console.log("Webinar Created via Local File:", savedWebinar._id, "Slug:", savedWebinar.slug);
-    }
-
     const registrationLink = `${frontendUrl}/register/${savedWebinar.slug}`;
+    
+    console.log("Webinar Created:", savedWebinar._id, "Slug:", savedWebinar.slug);
     console.log("Registration Link:", registrationLink);
     
     res.status(201).json({
@@ -156,29 +86,11 @@ const createWebinar = async (req, res) => {
 // @access  Private (Admin only)
 const getAllWebinars = async (req, res) => {
   try {
-    let webinars = [];
-    
-    // Try MongoDB first
-    try {
-      const mongoWebinars = await Webinar.find({}).sort({ createdAt: -1 });
-      webinars = mongoWebinars.map(w => w.toObject()); // Convert to plain objects
-    } catch (e) {
-      console.error("MongoDB GetAll Webinars Error:", e.message);
-    }
-
-    // Fallback to file
-    if (webinars.length === 0) {
-      webinars = readData().sort((a, b) => 
-        new Date(b.createdAt) - new Date(a.createdAt)
-      );
-    }
-
+    const webinars = await Webinar.find({}).sort({ createdAt: -1 });
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     
-    // Add registration links
     const webinarsWithLinks = webinars.map(w => {
       const slug = w.slug || 'unknown';
-      console.log("Webinar:", w.name, "Slug:", slug);
       return {
         _id: w._id,
         name: w.name,
@@ -188,7 +100,6 @@ const getAllWebinars = async (req, res) => {
         date: w.date,
         location: w.location,
         isActive: w.isActive,
-        // Batch Details
         batchCode: w.batchCode,
         batchName: w.batchName,
         trainer: w.trainer,
@@ -222,20 +133,7 @@ const getWebinarBySlug = async (req, res) => {
   console.log("Get Webinar by Slug:", slug);
 
   try {
-    let webinar = null;
-    
-    // Try MongoDB first
-    try {
-      webinar = await Webinar.findOne({ slug, isActive: true });
-    } catch (e) {
-      console.error("MongoDB GetBySlug Error:", e.message);
-    }
-
-    // Fallback to file
-    if (!webinar) {
-      const data = readData();
-      webinar = data.find(w => w.slug === slug && w.isActive);
-    }
+    const webinar = await Webinar.findOne({ slug, isActive: true });
 
     if (webinar) {
       res.json({
@@ -273,34 +171,12 @@ const toggleWebinarStatus = async (req, res) => {
   console.log("Toggle Webinar Status:", webinarId);
 
   try {
-    let webinar = null;
-
-    // Try MongoDB first
-    try {
-      if (webinarId.match(/^[0-9a-fA-F]{24}$/)) {
-        webinar = await Webinar.findById(webinarId);
-        if (webinar) {
-          webinar.isActive = !webinar.isActive;
-          await webinar.save();
-        }
-      }
-    } catch (e) {
-      console.error("MongoDB Toggle Error:", e.message);
-    }
-
-    // Fallback to file
-    if (!webinar) {
-      const data = readData();
-      const index = data.findIndex(w => w._id === webinarId || w._id.toString() === webinarId);
-      
-      if (index !== -1) {
-        data[index].isActive = !data[index].isActive;
-        writeData(data);
-        webinar = data[index];
-      }
-    }
-
+    const webinar = await Webinar.findById(webinarId);
+    
     if (webinar) {
+      webinar.isActive = !webinar.isActive;
+      await webinar.save();
+      
       res.json({
         success: true,
         message: `Webinar ${webinar.isActive ? 'activated' : 'deactivated'}`,
@@ -329,27 +205,9 @@ const deleteWebinar = async (req, res) => {
   console.log("Delete Webinar:", webinarId);
 
   try {
-    let deleted = false;
+    const result = await Webinar.findByIdAndDelete(webinarId);
 
-    // Try MongoDB first
-    try {
-      if (webinarId.match(/^[0-9a-fA-F]{24}$/)) {
-        const result = await Webinar.findByIdAndDelete(webinarId);
-        if (result) deleted = true;
-      }
-    } catch (e) {
-      console.error("MongoDB Delete Error:", e.message);
-    }
-
-    // Also delete from file
-    const data = readData();
-    const newData = data.filter(w => w._id !== webinarId && w._id.toString() !== webinarId);
-    if (newData.length < data.length) {
-      writeData(newData);
-      deleted = true;
-    }
-
-    if (deleted) {
+    if (result) {
       res.json({
         success: true,
         message: 'Webinar deleted successfully'
@@ -378,7 +236,6 @@ const updateWebinar = async (req, res) => {
   const { name, date, description, location } = req.body;
 
   try {
-    let webinar = null;
     const updateData = {
       ...(name && { name: name.trim() }),
       ...(req.body.type && { type: req.body.type }),
@@ -387,26 +244,7 @@ const updateWebinar = async (req, res) => {
       ...(location && { location: location.trim() })
     };
 
-    // Try MongoDB first
-    try {
-      if (webinarId.match(/^[0-9a-fA-F]{24}$/)) {
-        webinar = await Webinar.findByIdAndUpdate(webinarId, updateData, { new: true });
-      }
-    } catch (e) {
-      console.error("MongoDB Update Webinar Error:", e.message);
-    }
-
-    // Fallback to file
-    if (!webinar) {
-      const data = readData();
-      const index = data.findIndex(w => w._id === webinarId || w._id.toString() === webinarId);
-      
-      if (index !== -1) {
-        data[index] = { ...data[index], ...updateData };
-        writeData(data);
-        webinar = data[index];
-      }
-    }
+    const webinar = await Webinar.findByIdAndUpdate(webinarId, updateData, { new: true });
 
     if (webinar) {
       res.json({
