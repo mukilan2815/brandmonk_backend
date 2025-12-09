@@ -15,12 +15,21 @@ const generateSlug = (name) => {
 // @access  Private (Admin only)
 const createWebinar = async (req, res) => {
   const { name, description, date, location, createdBy } = req.body;
-  console.log("Create Webinar Request:", req.body);
+  console.log("Create Webinar Request:", JSON.stringify(req.body, null, 2));
 
   if (!name || !date) {
     return res.status(400).json({
       success: false,
       message: 'Webinar name and date are required'
+    });
+  }
+
+  // Validate date
+  const dateObj = new Date(date);
+  if (isNaN(dateObj.getTime())) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid date format'
     });
   }
 
@@ -33,7 +42,7 @@ const createWebinar = async (req, res) => {
       slug: slug,
       type: req.body.type || 'Webinar',
       description: description?.trim() || '',
-      date: new Date(date),
+      date: dateObj,
       location: location?.trim() || 'Online',
       isActive: true,
       createdBy: createdBy || 'admin',
@@ -41,21 +50,26 @@ const createWebinar = async (req, res) => {
       batchName: req.body.batchName || '',
       trainer: req.body.trainer || '',
       timing: req.body.timing || '',
-      studentLimit: req.body.studentLimit || 0,
+      studentLimit: req.body.studentLimit ? Number(req.body.studentLimit) : 0,
       totalRegistrations: 0,
       createdAt: new Date()
     };
 
+    console.log("Saving webinar to MongoDB...");
     const webinar = new Webinar(webinarData);
     const savedWebinar = await webinar.save();
+    console.log("Webinar saved successfully:", savedWebinar._id);
     
     // Backup to Firebase (fire-and-forget, don't block main operation)
-    backupWebinar(savedWebinar).catch(err => console.error('Firebase backup error:', err.message));
+    try {
+      backupWebinar(savedWebinar).catch(err => console.error('Firebase backup error:', err.message));
+    } catch (fbError) {
+      console.error('Firebase backup invocation error:', fbError);
+    }
     
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const registrationLink = `${frontendUrl}/register/${savedWebinar.slug}`;
     
-    console.log("Webinar Created:", savedWebinar._id, "Slug:", savedWebinar.slug);
     console.log("Registration Link:", registrationLink);
     
     res.status(201).json({
@@ -78,9 +92,27 @@ const createWebinar = async (req, res) => {
     });
   } catch (error) {
     console.error("Create Webinar Error:", error);
+    
+    // Handle specific Mongoose errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(400).json({
+        success: false,
+        message: messages.join(', ')
+      });
+    }
+    
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'A webinar with this slug already exists. Please try again with a different name.'
+      });
+    }
+
     res.status(500).json({
       success: false,
-      message: 'Failed to create webinar'
+      message: 'Failed to create webinar',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
