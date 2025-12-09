@@ -3,11 +3,7 @@ const Webinar = require('../models/Webinar');
 const { backupStudent } = require('../services/firebaseBackup');
 
 // Generate certificate ID
-const generateCertificateId = async () => {
-  const count = await Student.countDocuments();
-  const sequenceNumber = (count + 1).toString().padStart(3, '0');
-  return `SMAPARMQ076${sequenceNumber}`;
-};
+
 
 // @desc    Register a new student
 // @route   POST /api/students/register
@@ -45,7 +41,7 @@ const registerStudent = async (req, res) => {
       });
     }
 
-    const certificateId = await generateCertificateId();
+
     
     const studentData = {
       name: name.trim(),
@@ -59,7 +55,7 @@ const registerStudent = async (req, res) => {
       collegeOrCompany: collegeOrCompany?.trim() || '',
       department: department?.trim() || '',
       yearOfStudyOrExperience: yearOfStudyOrExperience?.trim() || '',
-      certificateId,
+
       isEligible: false,
       hasFollowedInstagram: false,
       certificateSent: false,
@@ -68,7 +64,6 @@ const registerStudent = async (req, res) => {
 
     const student = new Student({
       ...studentData,
-      certificateId: undefined // Let pre-save hook generate it
     });
     const savedStudent = await student.save();
     

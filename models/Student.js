@@ -85,11 +85,30 @@ const studentSchema = mongoose.Schema({
 });
 
 // Pre-save middleware to generate certificate ID
-studentSchema.pre('save', async function() {
+studentSchema.pre('save', async function(next) {
   if (!this.certificateId) {
-    const count = await mongoose.model('Student').countDocuments();
-    const sequenceNumber = (count + 1).toString().padStart(3, '0');
-    this.certificateId = `SMAPARMQ076${sequenceNumber}`;
+    try {
+      // Find the last student created to continue the sequence
+      // Sorting by createdAt is safer than string comparison of IDs for numbers > 999
+      const lastStudent = await mongoose.model('Student').findOne({
+        certificateId: { $regex: /^SMAPARMQ076/ }
+      }).sort({ createdAt: -1 });
+      
+      let nextNum = 1;
+      if (lastStudent && lastStudent.certificateId) {
+        const match = lastStudent.certificateId.match(/SMAPARMQ076(\d+)/);
+        if (match) {
+          nextNum = parseInt(match[1], 10) + 1;
+        }
+      }
+      
+      this.certificateId = `SMAPARMQ076${nextNum.toString().padStart(3, '0')}`;
+      next();
+    } catch (error) {
+      next(error);
+    }
+  } else {
+    next();
   }
 });
 
