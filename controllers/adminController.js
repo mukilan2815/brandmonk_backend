@@ -1,6 +1,12 @@
 const Student = require('../models/Student');
 const Admin = require('../models/Admin');
 const { Resend } = require('resend');
+const { 
+  backupStudent, 
+  deleteStudentBackup, 
+  backupStudentsBatch,
+  logBackupEvent 
+} = require('../services/firebaseBackup');
 
 // Admin credentials (in production, use bcrypt and proper auth)
 const ADMIN_CREDENTIALS = {
@@ -130,6 +136,9 @@ const createStudent = async (req, res) => {
     const student = new Student(studentData);
     const savedStudent = await student.save();
 
+    // Backup to Firebase
+    await backupStudent(savedStudent);
+
     res.status(201).json({
       success: true,
       message: 'Student added successfully!',
@@ -165,6 +174,9 @@ const updateStudent = async (req, res) => {
     const student = await Student.findByIdAndUpdate(studentId, updateData, { new: true });
 
     if (student) {
+      // Backup updated student to Firebase
+      await backupStudent(student);
+      
       res.json({
         success: true,
         message: 'Student updated successfully!',
@@ -196,6 +208,16 @@ const deleteStudent = async (req, res) => {
     const result = await Student.findByIdAndDelete(studentId);
 
     if (result) {
+      // Log deletion event to Firebase but DON'T delete the backup
+      // This keeps historical data even if deleted from MongoDB
+      await logBackupEvent('STUDENT_DELETED_FROM_MONGO', {
+        studentId,
+        name: result.name,
+        email: result.email,
+        deletedAt: new Date().toISOString()
+      });
+      console.log(`📋 Student ${studentId} deleted from MongoDB, backup preserved in Firebase`);
+      
       res.json({
         success: true,
         message: 'Student deleted successfully'
@@ -232,6 +254,9 @@ const toggleEligibility = async (req, res) => {
     const student = await Student.findByIdAndUpdate(studentId, updateData, { new: true });
 
     if (student) {
+      // Backup updated student to Firebase
+      await backupStudent(student);
+      
       res.json({
         success: true,
         message: `Certificate eligibility ${isEligible ? 'approved' : 'revoked'}`,
@@ -396,10 +421,15 @@ const sendCertificateEmail = async (req, res) => {
 
     console.log("Email sent successfully to:", student.email, "ID:", emailData?.id);
 
-    await Student.findByIdAndUpdate(studentId, {
+    const updatedStudent = await Student.findByIdAndUpdate(studentId, {
       certificateSent: true,
       certificateSentAt: new Date()
-    });
+    }, { new: true });
+
+    // Backup updated student to Firebase
+    if (updatedStudent) {
+      await backupStudent(updatedStudent);
+    }
 
     res.json({
       success: true,
@@ -571,7 +601,11 @@ const bulkImportStudents = async (req, res) => {
         };
 
         const student = new Student(studentData);
-        await student.save();
+        const savedStudent = await student.save();
+        
+        // Backup to Firebase
+        await backupStudent(savedStudent);
+        
         results.success++;
 
       } catch (rowError) {
