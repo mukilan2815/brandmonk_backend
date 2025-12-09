@@ -74,7 +74,8 @@ const webinarSchema = mongoose.Schema({
 });
 
 // Generate unique slug before saving
-webinarSchema.pre('save', function(next) {
+// Generate unique slug before saving
+webinarSchema.pre('save', function() {
   if (!this.slug) {
     // Generate slug from name + random string
     const nameSlug = this.name.toLowerCase()
@@ -83,7 +84,6 @@ webinarSchema.pre('save', function(next) {
     const randomStr = crypto.randomBytes(4).toString('hex');
     this.slug = `${nameSlug}-${randomStr}`;
   }
-  next();
 });
 
 const Webinar = mongoose.model('Webinar', webinarSchema);
