@@ -1,7 +1,9 @@
 // Firebase Backup Service
 // This service automatically syncs all data to Firebase Firestore for backup
+// Gracefully handles Firebase not being available
 
-const { db, collection, doc, setDoc, deleteDoc, getDocs, writeBatch } = require('../config/firebase');
+const firebase = require('../config/firebase');
+const { db, collection, doc, setDoc, deleteDoc, getDocs, writeBatch, firebaseInitialized } = firebase;
 
 // Collection names in Firestore
 const COLLECTIONS = {
@@ -12,14 +14,21 @@ const COLLECTIONS = {
 };
 
 /**
+ * Check if Firebase is available
+ */
+const isFirebaseAvailable = () => {
+  return firebaseInitialized && db !== null;
+};
+
+/**
  * Convert MongoDB document to a plain object suitable for Firestore
  * Handles ObjectId, Date, and other MongoDB-specific types
  */
-const sanitizeForFirestore = (doc) => {
-  if (!doc) return null;
+const sanitizeForFirestore = (docData) => {
+  if (!docData) return null;
   
   const sanitized = {};
-  const data = doc._doc || doc;
+  const data = docData._doc || docData;
   
   for (const [key, value] of Object.entries(data)) {
     if (key === '__v') continue; // Skip version key
@@ -51,6 +60,11 @@ const sanitizeForFirestore = (doc) => {
  * Backup a single student to Firebase
  */
 const backupStudent = async (student) => {
+  if (!isFirebaseAvailable()) {
+    console.log('⏭️ Firebase not available, skipping student backup');
+    return false;
+  }
+  
   try {
     const studentId = student._id.toString();
     const sanitizedData = sanitizeForFirestore(student);
@@ -69,6 +83,11 @@ const backupStudent = async (student) => {
  * Backup a single webinar/course to Firebase
  */
 const backupWebinar = async (webinar) => {
+  if (!isFirebaseAvailable()) {
+    console.log('⏭️ Firebase not available, skipping webinar backup');
+    return false;
+  }
+  
   try {
     const webinarId = webinar._id.toString();
     const sanitizedData = sanitizeForFirestore(webinar);
@@ -87,6 +106,10 @@ const backupWebinar = async (webinar) => {
  * Delete a student backup from Firebase
  */
 const deleteStudentBackup = async (studentId) => {
+  if (!isFirebaseAvailable()) {
+    return false;
+  }
+  
   try {
     await deleteDoc(doc(db, COLLECTIONS.STUDENTS, studentId.toString()));
     console.log(`🗑️ Firebase: Deleted student backup ${studentId}`);
@@ -101,6 +124,10 @@ const deleteStudentBackup = async (studentId) => {
  * Delete a webinar backup from Firebase
  */
 const deleteWebinarBackup = async (webinarId) => {
+  if (!isFirebaseAvailable()) {
+    return false;
+  }
+  
   try {
     await deleteDoc(doc(db, COLLECTIONS.WEBINARS, webinarId.toString()));
     console.log(`🗑️ Firebase: Deleted webinar backup ${webinarId}`);
@@ -115,9 +142,15 @@ const deleteWebinarBackup = async (webinarId) => {
  * Backup multiple students in batch
  */
 const backupStudentsBatch = async (students) => {
+  if (!isFirebaseAvailable()) {
+    console.log('⏭️ Firebase not available, skipping batch student backup');
+    return false;
+  }
+  
   try {
-    const batch = writeBatch(db);
+    let batch = writeBatch(db);
     let count = 0;
+    let totalCommitted = 0;
     
     for (const student of students) {
       const studentId = student._id.toString();
@@ -132,12 +165,15 @@ const backupStudentsBatch = async (students) => {
       if (count >= 450) {
         await batch.commit();
         console.log(`✅ Firebase Batch: Committed ${count} students`);
+        totalCommitted += count;
+        batch = writeBatch(db); // Create new batch
         count = 0;
       }
     }
     
     if (count > 0) {
       await batch.commit();
+      totalCommitted += count;
       console.log(`✅ Firebase Batch: Committed ${count} students`);
     }
     
@@ -152,6 +188,11 @@ const backupStudentsBatch = async (students) => {
  * Backup multiple webinars in batch
  */
 const backupWebinarsBatch = async (webinars) => {
+  if (!isFirebaseAvailable()) {
+    console.log('⏭️ Firebase not available, skipping batch webinar backup');
+    return false;
+  }
+  
   try {
     const batch = writeBatch(db);
     let count = 0;
@@ -182,6 +223,10 @@ const backupWebinarsBatch = async (webinars) => {
  * Log a backup event
  */
 const logBackupEvent = async (action, details) => {
+  if (!isFirebaseAvailable()) {
+    return false;
+  }
+  
   try {
     const logId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     await setDoc(doc(db, COLLECTIONS.BACKUP_LOG, logId), {
@@ -201,6 +246,11 @@ const logBackupEvent = async (action, details) => {
  * Call this periodically or on server start
  */
 const fullSync = async (Student, Webinar) => {
+  if (!isFirebaseAvailable()) {
+    console.log('⏭️ Firebase not available, skipping full sync');
+    return false;
+  }
+  
   console.log('🔄 Starting full Firebase sync...');
   
   try {
@@ -235,11 +285,16 @@ const fullSync = async (Student, Webinar) => {
  * Get all students from Firebase backup
  */
 const getStudentsFromBackup = async () => {
+  if (!isFirebaseAvailable()) {
+    console.log('⏭️ Firebase not available');
+    return [];
+  }
+  
   try {
     const querySnapshot = await getDocs(collection(db, COLLECTIONS.STUDENTS));
     const students = [];
-    querySnapshot.forEach((doc) => {
-      students.push({ id: doc.id, ...doc.data() });
+    querySnapshot.forEach((docSnap) => {
+      students.push({ id: docSnap.id, ...docSnap.data() });
     });
     return students;
   } catch (error) {
@@ -252,11 +307,16 @@ const getStudentsFromBackup = async () => {
  * Get all webinars from Firebase backup
  */
 const getWebinarsFromBackup = async () => {
+  if (!isFirebaseAvailable()) {
+    console.log('⏭️ Firebase not available');
+    return [];
+  }
+  
   try {
     const querySnapshot = await getDocs(collection(db, COLLECTIONS.WEBINARS));
     const webinars = [];
-    querySnapshot.forEach((doc) => {
-      webinars.push({ id: doc.id, ...doc.data() });
+    querySnapshot.forEach((docSnap) => {
+      webinars.push({ id: docSnap.id, ...docSnap.data() });
     });
     return webinars;
   } catch (error) {
@@ -276,5 +336,6 @@ module.exports = {
   fullSync,
   getStudentsFromBackup,
   getWebinarsFromBackup,
+  isFirebaseAvailable,
   COLLECTIONS
 };

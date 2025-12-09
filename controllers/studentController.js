@@ -72,8 +72,8 @@ const registerStudent = async (req, res) => {
     });
     const savedStudent = await student.save();
     
-    // Backup to Firebase
-    await backupStudent(savedStudent);
+    // Backup to Firebase (fire-and-forget)
+    backupStudent(savedStudent).catch(err => console.error('Firebase backup error:', err.message));
     
     // Update webinar count
     await Webinar.findByIdAndUpdate(webinar._id, {
@@ -161,8 +161,8 @@ const markInstagramFollowed = async (req, res) => {
     );
 
     if (student) {
-      // Backup updated student to Firebase
-      await backupStudent(student);
+      // Backup updated student to Firebase (fire-and-forget)
+      backupStudent(student).catch(err => console.error('Firebase backup error:', err.message));
       
       res.json({
         success: true,
