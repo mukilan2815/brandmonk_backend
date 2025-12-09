@@ -57,17 +57,34 @@ const adminLogin = async (req, res) => {
 const getAllStudents = async (req, res) => {
   try {
     const students = await Student.find({}).sort({ createdAt: -1 });
-    const formattedStudents = students.map(s => ({
-      ...s._doc,
-      _id: s._id.toString()
-    }));
+    
+    // Filter out duplicates: same email + same course/webinar should only appear once
+    // Using a Map to track unique email+course combinations
+    const uniqueMap = new Map();
+    const uniqueStudents = [];
+    
+    for (const student of students) {
+      // Create a unique key using email (lowercase) + webinarName (course name)
+      const email = (student.email || '').toLowerCase().trim();
+      const courseName = (student.webinarName || '').toLowerCase().trim();
+      const uniqueKey = `${email}|${courseName}`;
+      
+      // Only keep the first occurrence (which is the most recent due to sorting)
+      if (!uniqueMap.has(uniqueKey)) {
+        uniqueMap.set(uniqueKey, true);
+        uniqueStudents.push({
+          ...student._doc,
+          _id: student._id.toString()
+        });
+      }
+    }
 
-    console.log(`GetAllStudents: Found ${students.length} from MongoDB`);
+    console.log(`GetAllStudents: Found ${students.length} from MongoDB, ${uniqueStudents.length} unique (after filtering duplicates)`);
 
     res.json({
       success: true,
-      count: formattedStudents.length,
-      students: formattedStudents
+      count: uniqueStudents.length,
+      students: uniqueStudents
     });
   } catch (error) {
     console.error("GetAllStudents Error:", error);
