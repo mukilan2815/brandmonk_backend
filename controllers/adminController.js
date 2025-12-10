@@ -68,6 +68,7 @@ const getAllStudents = async (req, res) => {
     // Using a Map to track unique email+course combinations
     const uniqueMap = new Map();
     const uniqueStudents = [];
+    const duplicates = [];
     
     for (const student of students) {
       // Create a unique key using email (lowercase) + webinarName (course name)
@@ -82,15 +83,37 @@ const getAllStudents = async (req, res) => {
           ...student._doc,
           _id: student._id.toString()
         });
+      } else {
+        // Track duplicates
+        duplicates.push({
+          name: student.name,
+          email: student.email,
+          course: student.webinarName,
+          registeredAt: student.createdAt
+        });
       }
     }
 
-    console.log(`GetAllStudents: Found ${students.length} from MongoDB, ${uniqueStudents.length} unique (after filtering duplicates)`);
+    // Log ONLY duplicates in a clean format
+    if (duplicates.length > 0) {
+      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`🔄 DUPLICATE REGISTRATIONS FOUND: ${duplicates.length}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      duplicates.forEach((dup, index) => {
+        console.log(`${index + 1}. ${dup.name} (${dup.email})`);
+        console.log(`   Course: ${dup.course}`);
+        console.log(`   Registered: ${new Date(dup.registeredAt).toLocaleString('en-IN')}`);
+        console.log('');
+      });
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    }
 
     res.json({
       success: true,
       count: uniqueStudents.length,
-      students: uniqueStudents
+      students: uniqueStudents,
+      duplicates: duplicates, // Send duplicates to frontend
+      totalInDB: students.length
     });
   } catch (error) {
     console.error("GetAllStudents Error:", error);
