@@ -653,6 +653,78 @@ const bulkImportStudents = async (req, res) => {
   }
 };
 
+// @desc    Remove duplicate registrations
+// @route   POST /api/admin/students/remove-duplicates
+// @access  Private (Admin only)
+const removeDuplicates = async (req, res) => {
+  console.log("🧹 Starting duplicate removal process...");
+  
+  try {
+    const students = await Student.find({}).sort({ createdAt: -1 });
+    
+    const uniqueMap = new Map();
+    const toDelete = [];
+    const duplicates = [];
+    
+    // Identify duplicates: same email + same course
+    for (const student of students) {
+      const email = (student.email || '').toLowerCase().trim();
+      const courseName = (student.webinarName || '').toLowerCase().trim();
+      const uniqueKey = `${email}|${courseName}`;
+      
+      if (!uniqueMap.has(uniqueKey)) {
+        // Keep the first occurrence (most recent due to sorting)
+        uniqueMap.set(uniqueKey, student._id);
+      } else {
+        // Mark for deletion
+        toDelete.push(student._id);
+        duplicates.push({
+          id: student._id.toString(),
+          name: student.name,
+          email: student.email,
+          course: student.webinarName,
+          registeredAt: student.createdAt
+        });
+      }
+    }
+    
+    if (toDelete.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No duplicates found!',
+        removed: 0,
+        duplicates: []
+      });
+    }
+    
+    // Log what will be deleted
+    console.log(`\n📋 Found ${toDelete.length} duplicate entries to remove:`);
+    duplicates.forEach((dup, index) => {
+      console.log(`${index + 1}. ${dup.name} (${dup.email}) - ${dup.course}`);
+    });
+    
+    // Delete duplicates
+    const deleteResult = await Student.deleteMany({ _id: { $in: toDelete } });
+    
+    console.log(`\n✅ Successfully removed ${deleteResult.deletedCount} duplicate entries`);
+    console.log(`💾 Keeping ${uniqueMap.size} unique registrations\n`);
+    
+    res.json({
+      success: true,
+      message: `Removed ${deleteResult.deletedCount} duplicate registrations`,
+      removed: deleteResult.deletedCount,
+      duplicates: duplicates
+    });
+    
+  } catch (error) {
+    console.error("RemoveDuplicates Error:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to remove duplicates: ' + error.message
+    });
+  }
+};
+
 module.exports = { 
   adminLogin, 
   getAllStudents,
@@ -662,5 +734,6 @@ module.exports = {
   toggleEligibility, 
   sendCertificateEmail,
   getDashboardStats,
-  bulkImportStudents
+  bulkImportStudents,
+  removeDuplicates
 };

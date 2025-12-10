@@ -9,7 +9,8 @@ const {
   toggleEligibility, 
   sendCertificateEmail,
   getDashboardStats,
-  bulkImportStudents
+  bulkImportStudents,
+  removeDuplicates
 } = require('../controllers/adminController');
 
 // Admin login
@@ -38,5 +39,8 @@ router.patch('/students/:id/eligibility', toggleEligibility);
 
 // Send certificate email (Coimbatore admin only)
 router.post('/students/:id/send-certificate', sendCertificateEmail);
+
+// Remove duplicate registrations
+router.post('/students/remove-duplicates', removeDuplicates);
 
 module.exports = router;
