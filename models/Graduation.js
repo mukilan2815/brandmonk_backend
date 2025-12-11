@@ -54,18 +54,15 @@ const graduationSchema = mongoose.Schema({
     }
   },
   
-  // Seat allocation
+  // Seat allocation (auto-generated)
   seatStart: {
-    type: Number,
-    required: true
+    type: Number
   },
   seatEnd: {
-    type: Number,
-    required: true
+    type: Number
   },
   totalSeats: {
-    type: Number,
-    required: true
+    type: Number
   },
   
   registrationDate: {
