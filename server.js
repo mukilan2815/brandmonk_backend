@@ -5,6 +5,8 @@ const connectDB = require('./config/db');
 const studentRoutes = require('./routes/studentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const webinarRoutes = require('./routes/webinarRoutes');
+const graduationRoutes = require('./routes/graduationRoutes');
+
 
 // Firebase Backup Service
 const { fullSync, getStudentsFromBackup, getWebinarsFromBackup } = require('./services/firebaseBackup');
@@ -51,6 +53,8 @@ connectDB();
 app.use('/api/students', studentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/webinars', webinarRoutes);
+app.use('/api/graduation', graduationRoutes);
+
 
 // Health check endpoint
   app.get('/api/health', (req, res) => {
