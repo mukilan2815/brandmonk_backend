@@ -71,10 +71,14 @@ const getAllStudents = async (req, res) => {
     const duplicates = [];
     
     for (const student of students) {
-      // Create a unique key using email (lowercase) + webinarName (course name)
+      // Create a unique key using email + webinar occurrence identifier.
+      // Prefer webinarSlug (supports same webinar name across different dates).
       const email = (student.email || '').toLowerCase().trim();
+      const webinarSlug = (student.webinarSlug || '').toLowerCase().trim();
+      const webinarId = student.webinarId ? String(student.webinarId) : '';
       const courseName = (student.webinarName || '').toLowerCase().trim();
-      const uniqueKey = `${email}|${courseName}`;
+      const uniqueProgramKey = webinarSlug || webinarId || courseName;
+      const uniqueKey = `${email}|${uniqueProgramKey}`;
       
       // Only keep the first occurrence (which is the most recent due to sorting)
       if (!uniqueMap.has(uniqueKey)) {
@@ -566,6 +570,7 @@ const bulkImportStudents = async (req, res) => {
         const email = (row['Email'] || row['email'] || '').toString().trim().toLowerCase();
         const phone = (row['Phone'] || row['phone'] || '').toString().trim();
         const webinarName = (row['Program Name'] || row['Program'] || row['webinarName'] || '').toString().trim();
+        const webinarSlug = (row['webinarSlug'] || row['Webinar Slug'] || row['Slug'] || '').toString().trim();
         const location = (row['Location'] || row['location'] || '').toString().trim();
         const profession = (row['Profession'] || row['profession'] || 'Others').toString().trim();
         const collegeOrCompany = (row['College/Company'] || row['collegeOrCompany'] || '').toString().trim();
@@ -581,11 +586,14 @@ const bulkImportStudents = async (req, res) => {
           continue;
         }
 
-        const existingStudent = await Student.findOne({ email, webinarName });
+        const existingStudentQuery = webinarSlug
+          ? { email, webinarSlug }
+          : { email, webinarName };
+        const existingStudent = await Student.findOne(existingStudentQuery);
 
         if (existingStudent) {
           results.skipped++;
-          results.errors.push(`Duplicate: ${name} (${email}) already registered for ${webinarName}`);
+          results.errors.push(`Duplicate: ${name} (${email}) already registered for ${webinarSlug || webinarName}`);
           continue;
         }
 
@@ -611,6 +619,7 @@ const bulkImportStudents = async (req, res) => {
           email,
           phone: phone || 'N/A',
           webinarName: webinarName || 'Imported Program',
+          ...(webinarSlug ? { webinarSlug } : {}),
           location: location || 'N/A',
           profession: mappedProfession,
           collegeOrCompany,
@@ -666,11 +675,14 @@ const removeDuplicates = async (req, res) => {
     const toDelete = [];
     const duplicates = [];
     
-    // Identify duplicates: same email + same course
+    // Identify duplicates: same email + same webinar occurrence (slug preferred)
     for (const student of students) {
       const email = (student.email || '').toLowerCase().trim();
+      const webinarSlug = (student.webinarSlug || '').toLowerCase().trim();
+      const webinarId = student.webinarId ? String(student.webinarId) : '';
       const courseName = (student.webinarName || '').toLowerCase().trim();
-      const uniqueKey = `${email}|${courseName}`;
+      const uniqueProgramKey = webinarSlug || webinarId || courseName;
+      const uniqueKey = `${email}|${uniqueProgramKey}`;
       
       if (!uniqueMap.has(uniqueKey)) {
         // Keep the first occurrence (most recent due to sorting)
