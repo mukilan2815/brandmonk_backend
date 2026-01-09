@@ -41,7 +41,45 @@ const registerStudent = async (req, res) => {
       });
     }
 
+    // Generate Certificate ID manually
+    console.log("Generating Certificate ID for registration...");
+    let certificateId = '';
+    
+    const lastStudents = await Student.find({
+      certificateId: { $regex: /^SMAPARMQ076/ }
+    }).sort({ createdAt: -1 }).limit(1);
+    
+    const lastStudent = lastStudents[0];
+    
+    let nextNum = 1;
+    if (lastStudent && lastStudent.certificateId) {
+      const match = lastStudent.certificateId.match(/SMAPARMQ076(\d+)/);
+      if (match) {
+        nextNum = parseInt(match[1], 10) + 1;
+      }
+    }
 
+    // Ensure uniqueness by checking if the ID exists and incrementing
+    let isUnique = false;
+    let attempts = 0;
+    
+    while (!isUnique && attempts < 20) {
+      const potentialId = `SMAPARMQ076${nextNum.toString().padStart(3, '0')}`;
+      const existing = await Student.findOne({ certificateId: potentialId });
+      
+      if (!existing) {
+        certificateId = potentialId;
+        isUnique = true;
+        console.log("Generated Certificate ID:", certificateId);
+      } else {
+        nextNum++;
+        attempts++;
+      }
+    }
+
+    if (!isUnique) {
+      throw new Error('Unable to generate unique Certificate ID');
+    }
     
     const studentData = {
       name: name.trim(),
@@ -55,7 +93,7 @@ const registerStudent = async (req, res) => {
       collegeOrCompany: collegeOrCompany?.trim() || '',
       department: department?.trim() || '',
       yearOfStudyOrExperience: yearOfStudyOrExperience?.trim() || '',
-
+      certificateId, // Explicitly set generated ID
       isEligible: false,
       hasFollowedInstagram: false,
       certificateSent: false,
@@ -92,7 +130,8 @@ const registerStudent = async (req, res) => {
     console.error("Register Student Error:", error);
     res.status(500).json({ 
       success: false, 
-      message: 'Registration failed. Please try again.' 
+      message: 'Registration failed. Please try again.',
+      error: error.message
     });
   }
 };
