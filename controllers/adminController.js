@@ -132,19 +132,85 @@ const getAllStudents = async (req, res) => {
 // @route   POST /api/admin/students
 // @access  Private (Admin only - Chennai can add)
 const createStudent = async (req, res) => {
-  console.log("Admin Create Student:", req.body);
+  console.log("Admin Create Student Request Recieved");
+  console.log("Body:", req.body);
   const { name, email, phone, webinarName, location, profession } = req.body;
 
   if (!name || !email || !phone || !webinarName || !location || !profession) {
+    console.log("Validation failed: Missing fields");
     return res.status(400).json({
       success: false,
       message: 'All fields are required'
     });
   }
 
+  // Check for duplicate student
   try {
-    const count = await Student.countDocuments();
-    const certificateId = `SMAPARMQ076${(count + 1).toString().padStart(3, '0')}`;
+    const existingStudent = await Student.findOne({ email: email.trim().toLowerCase() });
+    if (existingStudent) {
+      console.log("Duplicate email found:", email);
+      return res.status(400).json({
+        success: false,
+        message: 'Student with this email already exists'
+      });
+    }
+  } catch (err) {
+    console.error("Error checking duplicate email:", err);
+    return res.status(500).json({ success: false, message: 'Database error checking duplicates' });
+  }
+
+  // Determine certificate type based on input or default to Standard
+  const validCertificateType = ['Standard', 'Government'].includes(req.body.certificateType) 
+    ? req.body.certificateType 
+    : 'Standard';
+
+  try {
+    console.log("Starting Certificate ID generation...");
+    // Generate Certificate ID manually in controller
+    let certificateId = '';
+    
+    // Find the last created student to get a starting point 
+    const lastStudents = await Student.find({
+      certificateId: { $regex: /^SMAPARMQ076/ }
+    }).sort({ createdAt: -1 }).limit(1);
+    
+    console.log("Last student found:", lastStudents.length > 0 ? lastStudents[0].certificateId : "None");
+    
+    const lastStudent = lastStudents[0];
+    
+    let nextNum = 1;
+    if (lastStudent && lastStudent.certificateId) {
+      const match = lastStudent.certificateId.match(/SMAPARMQ076(\d+)/);
+      if (match) {
+        nextNum = parseInt(match[1], 10) + 1;
+      }
+    }
+    
+    console.log("Initial nextNum:", nextNum);
+
+    // Ensure uniqueness by checking if the ID exists and incrementing
+    let isUnique = false;
+    let attempts = 0;
+    
+    while (!isUnique && attempts < 20) {
+      const potentialId = `SMAPARMQ076${nextNum.toString().padStart(3, '0')}`;
+      // console.log("Checking potential ID:", potentialId);
+      const existing = await Student.findOne({ certificateId: potentialId });
+      
+      if (!existing) {
+        certificateId = potentialId;
+        isUnique = true;
+        console.log("Unique ID found:", certificateId);
+      } else {
+        console.log("Collision for ID:", potentialId, "Retrying...");
+        nextNum++;
+        attempts++;
+      }
+    }
+
+    if (!isUnique) {
+      throw new Error('Unable to generate unique Certificate ID');
+    }
 
     const studentData = {
       name: name.trim(),
@@ -153,15 +219,20 @@ const createStudent = async (req, res) => {
       webinarName: webinarName.trim(),
       location: location.trim(),
       profession,
-      certificateId,
+      certificateId, // Explicitly set the generated ID
       isEligible: false,
       hasFollowedInstagram: false,
       certificateSent: false,
-      dateOfRegistration: new Date()
+      dateOfRegistration: new Date(),
+      certificateType: validCertificateType
     };
+
+    console.log("Attempting to save student data:", studentData);
 
     const student = new Student(studentData);
     const savedStudent = await student.save();
+    
+    console.log("Student saved successfully:", savedStudent._id);
 
     // Backup to Firebase (fire-and-forget)
     backupStudent(savedStudent).catch(err => console.error('Firebase backup error:', err.message));
@@ -172,10 +243,12 @@ const createStudent = async (req, res) => {
       student: savedStudent
     });
   } catch (error) {
-    console.error("CreateStudent Error:", error);
+    console.error("CRITICAL CreateStudent Error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to add student'
+      message: 'Failed to add student',
+      error: error.message,
+      stack: error.stack // Include stack for debugging
     });
   }
 };
@@ -195,7 +268,8 @@ const updateStudent = async (req, res) => {
       ...(phone && { phone: phone.trim() }),
       ...(webinarName && { webinarName: webinarName.trim() }),
       ...(location && { location: location.trim() }),
-      ...(profession && { profession })
+      ...(profession && { profession }),
+      ...(req.body.certificateType && { certificateType: req.body.certificateType })
     };
 
     const student = await Student.findByIdAndUpdate(studentId, updateData, { new: true });
