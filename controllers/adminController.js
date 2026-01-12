@@ -71,13 +71,19 @@ const getAllStudents = async (req, res) => {
     const duplicates = [];
     
     for (const student of students) {
+      if (!student) continue;
+
       // Create a unique key using email + webinar occurrence identifier.
       // Prefer webinarSlug (supports same webinar name across different dates).
       const email = (student.email || '').toLowerCase().trim();
+      
+      // Skip if critical data is missing
+      if (!email && !student.name) continue;
+
       const webinarSlug = (student.webinarSlug || '').toLowerCase().trim();
       const webinarId = student.webinarId ? String(student.webinarId) : '';
       const courseName = (student.webinarName || '').toLowerCase().trim();
-      const uniqueProgramKey = webinarSlug || webinarId || courseName;
+      const uniqueProgramKey = webinarSlug || webinarId || courseName || 'unknown-program';
       const uniqueKey = `${email}|${uniqueProgramKey}`;
       
       // Only keep the first occurrence (which is the most recent due to sorting)
@@ -90,10 +96,10 @@ const getAllStudents = async (req, res) => {
       } else {
         // Track duplicates
         duplicates.push({
-          name: student.name,
-          email: student.email,
-          course: student.webinarName,
-          registeredAt: student.createdAt
+          name: student.name || 'Unknown',
+          email: student.email || 'no-email',
+          course: student.webinarName || 'Unknown',
+          registeredAt: student.createdAt || new Date()
         });
       }
     }
@@ -120,10 +126,13 @@ const getAllStudents = async (req, res) => {
       totalInDB: students.length
     });
   } catch (error) {
-    console.error("GetAllStudents Error:", error);
-    res.status(500).json({ 
+    console.error("Critical GetAllStudents Error:", error);
+    // Return empty list instead of crashing client
+    res.status(200).json({ 
       success: false, 
-      message: 'Failed to fetch students' 
+      message: 'Partial load due to error',
+      students: [],
+      error: error.message
     });
   }
 };
@@ -554,8 +563,8 @@ const getDashboardStats = async (req, res) => {
 
     const stats = {
       totalStudents: students.length,
-      eligibleStudents: students.filter(s => s.isEligible).length,
-      certificatesSent: students.filter(s => s.certificateSent).length,
+      eligibleStudents: 0,
+      certificatesSent: 0,
       professionBreakdown: {},
       locationBreakdown: {},
       webinarBreakdown: {},
@@ -573,8 +582,17 @@ const getDashboardStats = async (req, res) => {
     }
 
     students.forEach(s => {
-      stats.professionBreakdown[s.profession] = (stats.professionBreakdown[s.profession] || 0) + 1;
-      stats.locationBreakdown[s.location] = (stats.locationBreakdown[s.location] || 0) + 1;
+      if (!s) return;
+
+      if (s.isEligible) stats.eligibleStudents++;
+      if (s.certificateSent) stats.certificatesSent++;
+
+      const prof = s.profession || 'Other';
+      stats.professionBreakdown[prof] = (stats.professionBreakdown[prof] || 0) + 1;
+
+      const loc = s.location || 'Unknown';
+      stats.locationBreakdown[loc] = (stats.locationBreakdown[loc] || 0) + 1;
+
       const wName = s.webinarName || 'Unknown';
       stats.webinarBreakdown[wName] = (stats.webinarBreakdown[wName] || 0) + 1;
 
@@ -605,9 +623,20 @@ const getDashboardStats = async (req, res) => {
     });
   } catch (error) {
     console.error("GetStats Error:", error);
-    res.status(500).json({ 
+    // Return empty stats safely
+    res.status(200).json({ 
       success: false, 
-      message: 'Failed to fetch stats' 
+      message: 'Failed to fetch stats',
+      stats: {
+        totalStudents: 0,
+        eligibleStudents: 0,
+        certificatesSent: 0,
+        professionBreakdown: {},
+        locationBreakdown: {},
+        webinarBreakdown: {},
+        monthlyRegistrations: [],
+        topWebinars: []
+      }
     });
   }
 };

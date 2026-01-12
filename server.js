@@ -5,6 +5,7 @@ const connectDB = require('./config/db');
 const studentRoutes = require('./routes/studentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const webinarRoutes = require('./routes/webinarRoutes');
+const courseStudentRoutes = require('./routes/courseStudentRoutes');
 
 
 
@@ -53,6 +54,7 @@ connectDB();
 app.use('/api/students', studentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/webinars', webinarRoutes);
+app.use('/api/course-students', courseStudentRoutes);
 
 
 

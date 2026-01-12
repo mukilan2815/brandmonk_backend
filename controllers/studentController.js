@@ -229,7 +229,15 @@ const markInstagramFollowed = async (req, res) => {
 const getStudentById = async (req, res) => {
   console.log("GetStudentById Request ID:", req.params.id);
   try {
-    const student = await Student.findById(req.params.id);
+    let student;
+    
+    // Try finding by certificateId first (most likely for QR scans)
+    student = await Student.findOne({ certificateId: req.params.id });
+
+    // If not found, and it looks like a Mongo ID, try that
+    if (!student && req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+        student = await Student.findById(req.params.id);
+    }
 
     if (student) {
       res.json({
@@ -240,6 +248,9 @@ const getStudentById = async (req, res) => {
           email: student.email,
           webinarName: student.webinarName,
           certificateId: student.certificateId,
+          profession: student.profession,
+          location: student.location,
+          certificateType: student.certificateType,
           dateOfRegistration: student.dateOfRegistration || student.createdAt,
           isEligible: student.isEligible || false
         }
@@ -254,7 +265,7 @@ const getStudentById = async (req, res) => {
     console.error("GetStudentById Error:", error);
     res.status(500).json({ 
       success: false, 
-      message: 'Invalid Certificate ID' 
+      message: 'Server Error' 
     });
   }
 };

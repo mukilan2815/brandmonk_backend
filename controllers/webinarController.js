@@ -125,38 +125,53 @@ const getAllWebinars = async (req, res) => {
     const webinars = await Webinar.find({}).sort({ createdAt: -1 });
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     
+    // Check if webinars is null/undefined
+    if (!webinars) {
+      return res.json({
+        success: true,
+        count: 0,
+        webinars: []
+      });
+    }
+
     const webinarsWithLinks = webinars.map(w => {
+      // Robust null check for each webinar doc
+      if (!w) return null;
+
       const slug = w.slug || 'unknown';
       return {
         _id: w._id,
-        name: w.name,
+        name: w.name || 'Untitled Webinar',
         slug: slug,
         type: w.type || 'Webinar',
-        description: w.description,
+        description: w.description || '',
         date: w.date,
-        location: w.location,
-        isActive: w.isActive,
-        batchCode: w.batchCode,
-        batchName: w.batchName,
-        trainer: w.trainer,
-        timing: w.timing,
-        studentLimit: w.studentLimit,
+        location: w.location || 'Online',
+        isActive: w.isActive || false,
+        batchCode: w.batchCode || '',
+        batchName: w.batchName || '',
+        trainer: w.trainer || '',
+        timing: w.timing || '',
+        studentLimit: w.studentLimit || 0,
         totalRegistrations: w.totalRegistrations || 0,
         createdAt: w.createdAt,
         registrationLink: `${frontendUrl}/register/${slug}`
       };
-    });
+    }).filter(Boolean); // Remove any null entries
 
     res.json({
       success: true,
-      count: webinars.length,
+      count: webinarsWithLinks.length,
       webinars: webinarsWithLinks
     });
   } catch (error) {
-    console.error("GetAllWebinars Error:", error);
-    res.status(500).json({
+    console.error("Critical GetAllWebinars Error:", error);
+    // Return empty list safely instead of crashing
+    res.status(200).json({
       success: false,
-      message: 'Failed to fetch webinars'
+      message: 'Failed to fetch webinars',
+      webinars: [],
+      error: error.message
     });
   }
 };
