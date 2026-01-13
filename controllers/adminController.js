@@ -104,18 +104,9 @@ const getAllStudents = async (req, res) => {
       }
     }
 
-    // Log ONLY duplicates in a clean format
+    // Log duplicates summary (not individual entries to avoid log spam)
     if (duplicates.length > 0) {
-      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`🔄 DUPLICATE REGISTRATIONS FOUND: ${duplicates.length}`);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      duplicates.forEach((dup, index) => {
-        console.log(`${index + 1}. ${dup.name} (${dup.email})`);
-        console.log(`   Course: ${dup.course}`);
-        console.log(`   Registered: ${new Date(dup.registeredAt).toLocaleString('en-IN')}`);
-        console.log('');
-      });
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      console.log(`� Students: ${uniqueStudents.length} unique | ${duplicates.length} duplicates filtered`);
     }
 
     res.json({
