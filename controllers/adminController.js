@@ -169,23 +169,24 @@ const createStudent = async (req, res) => {
     // Generate Certificate ID manually in controller
     let certificateId = '';
     
-    // Find the highest numeric certificate ID using aggregation (string sort doesn't work for numbers)
-    const maxIdResult = await Student.aggregate([
-      { $match: { certificateId: { $regex: /^SMAPARMQ076\d+$/ } } },
-      { 
-        $project: { 
-          numericId: { 
-            $toInt: { $substr: ['$certificateId', 10, -1] } // Extract number after "SMAPARMQ076"
-          } 
-        } 
-      },
-      { $sort: { numericId: -1 } },
-      { $limit: 1 }
-    ]);
-
+    // Find the highest certificate ID by fetching all matching IDs and finding max in JS
+    // (MongoDB aggregation $toInt fails on large numbers that overflow 32-bit int)
+    const allCertIds = await Student.find(
+      { certificateId: { $regex: /^SMAPARMQ076\d+$/ } },
+      { certificateId: 1 }
+    ).lean();
+    
     let nextNum = 1;
-    if (maxIdResult.length > 0 && maxIdResult[0].numericId) {
-      nextNum = maxIdResult[0].numericId + 1;
+    if (allCertIds.length > 0) {
+      let maxNum = 0;
+      for (const doc of allCertIds) {
+        const match = doc.certificateId.match(/SMAPARMQ076(\d+)/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      }
+      nextNum = maxNum + 1;
     }
     
     console.log("Next Certificate Number:", nextNum);
