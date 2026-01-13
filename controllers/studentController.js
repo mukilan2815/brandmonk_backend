@@ -45,31 +45,33 @@ const registerStudent = async (req, res) => {
     console.log("Generating Certificate ID for registration...");
     let certificateId = '';
     
-    // Find the student with the highest certificate ID to identify the correct next number
-    const lastStudents = await Student.find({
-      certificateId: { $regex: /^SMAPARMQ076/ }
-    }).sort({ certificateId: -1 }).limit(1);
-    
-    // ... (rest of logic)
+    // Find the highest numeric certificate ID using aggregation (string sort doesn't work for numbers)
+    const maxIdResult = await Student.aggregate([
+      { $match: { certificateId: { $regex: /^SMAPARMQ076\d+$/ } } },
+      { 
+        $project: { 
+          numericId: { 
+            $toInt: { $substr: ['$certificateId', 10, -1] } // Extract number after "SMAPARMQ076"
+          } 
+        } 
+      },
+      { $sort: { numericId: -1 } },
+      { $limit: 1 }
+    ]);
 
-    console.log("Last student found:", lastStudents.length > 0 ? lastStudents[0].certificateId : "None");
-    
-    const lastStudent = lastStudents[0];
-    
     let nextNum = 1;
-    if (lastStudent && lastStudent.certificateId) {
-      const match = lastStudent.certificateId.match(/SMAPARMQ076(\d+)/);
-      if (match) {
-        nextNum = parseInt(match[1], 10) + 1;
-      }
+    if (maxIdResult.length > 0 && maxIdResult[0].numericId) {
+      nextNum = maxIdResult[0].numericId + 1;
     }
+    
+    console.log("Next Certificate Number:", nextNum);
 
     // Ensure uniqueness by checking if the ID exists and incrementing
     let isUnique = false;
     let attempts = 0;
     
-    // Increased retry limit to avoid failures
-    while (!isUnique && attempts < 50) {
+    // High retry limit for concurrent registrations
+    while (!isUnique && attempts < 200) {
       const potentialId = `SMAPARMQ076${nextNum.toString().padStart(3, '0')}`;
       const existing = await Student.findOne({ certificateId: potentialId });
       
