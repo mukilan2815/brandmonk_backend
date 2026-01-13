@@ -45,9 +45,14 @@ const registerStudent = async (req, res) => {
     console.log("Generating Certificate ID for registration...");
     let certificateId = '';
     
+    // Find the student with the highest certificate ID to identify the correct next number
     const lastStudents = await Student.find({
       certificateId: { $regex: /^SMAPARMQ076/ }
-    }).sort({ createdAt: -1 }).limit(1);
+    }).sort({ certificateId: -1 }).limit(1);
+    
+    // ... (rest of logic)
+
+    console.log("Last student found:", lastStudents.length > 0 ? lastStudents[0].certificateId : "None");
     
     const lastStudent = lastStudents[0];
     
@@ -63,7 +68,8 @@ const registerStudent = async (req, res) => {
     let isUnique = false;
     let attempts = 0;
     
-    while (!isUnique && attempts < 20) {
+    // Increased retry limit to avoid failures
+    while (!isUnique && attempts < 50) {
       const potentialId = `SMAPARMQ076${nextNum.toString().padStart(3, '0')}`;
       const existing = await Student.findOne({ certificateId: potentialId });
       
