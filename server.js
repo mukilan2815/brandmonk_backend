@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
@@ -50,7 +51,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Database Connection
-connectDB();
+// connectDB() called in startServer()
 
 // API Routes
 app.use('/api/students', studentRoutes);
@@ -61,11 +62,17 @@ app.use('/api/course-students', courseStudentRoutes);
 
 
 // Health check endpoint
-  app.get('/api/health', (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  const states = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
+  
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    message: 'Brand Monk Academy API is running'
+    message: 'Brand Monk Academy API is running',
+    database: {
+      state: states[dbState] || 'unknown',
+      host: mongoose.connection.host || 'none'
+    }
   });
 });
 
@@ -157,20 +164,35 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, async () => {
-  console.log('========================================');
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`📍 API: http://localhost:${PORT}`);
-  console.log('========================================');
-  
-  // Perform initial Firebase sync after server starts
-  console.log('🔄 Starting initial Firebase backup sync...');
-  setTimeout(async () => {
-    try {
-      await fullSync(Student, Webinar);
-      console.log('✅ Initial Firebase sync completed!');
-    } catch (error) {
-      console.error('⚠️ Initial Firebase sync failed:', error.message);
-    }
-  }, 5000); // Wait 5 seconds for MongoDB connection to be established
-});
+const startServer = async () => {
+  try {
+    // Attempt to connect to Database
+    await connectDB();
+    
+    app.listen(PORT, () => {
+      console.log('========================================');
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`📍 API: http://localhost:${PORT}`);
+      console.log('========================================');
+      
+      // Perform initial Firebase sync after server starts
+      console.log('🔄 Starting initial Firebase backup sync...');
+      setTimeout(async () => {
+        try {
+          await fullSync(Student, Webinar);
+          console.log('✅ Initial Firebase sync completed!');
+        } catch (error) {
+          console.error('⚠️ Initial Firebase sync failed:', error.message);
+        }
+      }, 5000); 
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to connect to Database:', error.message);
+    // Optional: Start server anyway to serve health check with error details? 
+    // For now, let's allow it to start so we can debug via /api/health
+    app.listen(PORT, () => console.log(`⚠️ Server running (DB Failed) on port ${PORT}`));
+  }
+};
+
+startServer();
