@@ -6,7 +6,8 @@ require('dotenv').config();
 const updates = [
   { oldId: 'BMADM0001', newId: 'BMAJUNDMMES/Q0506S050', name: 'Sakthikumaran M' },
   { oldId: 'BMADM0002', newId: 'BMAJUNDMMES/Q0506S051', name: 'SASIKALA J' },
-  { oldId: 'BMADM0003', newId: 'BMAJUNDMMES/Q0506S052', name: 'nivethitha s' }
+  { oldId: 'BMADM0003', newId: 'BMAJUNDMMES/Q0506S052', name: 'nivethitha s' },
+  { oldId: 'BMADM0004', newId: 'BMAJUNDMMES/Q0506S053', name: 'B.THARUN' }
 ];
 
 mongoose.connect(process.env.MONGO_URI).then(async () => {

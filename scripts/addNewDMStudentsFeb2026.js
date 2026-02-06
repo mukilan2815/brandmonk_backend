@@ -6,7 +6,8 @@ require('dotenv').config();
 const newStudents = [
   'Sakthikumaran M',
   'SASIKALA J',
-  'nivethitha s'
+  'nivethitha s',
+  'B.THARUN'
 ];
 
 const connectDB = async () => {
