@@ -1,0 +1,55 @@
+Starting Fix Script...
+Connecting to MongoDB...
+✅ MongoDB Connected
+------------------------------------------------
+Processing: Ashiquah
+   Current ID: BMAJUNDMMES/Q0506S054
+   Target ID : BMAJUNDMMES/Q0506S054
+   ✨ Already Matches
+   Verify: https://brandmonkacademy.com/verify/BMAJUNDMMES/Q0506S054
+------------------------------------------------
+Processing: Prakash Swaminathan
+   Current ID: BMAJUNDMMES/Q0506S055
+   Target ID : BMAJUNDMMES/Q0506S055
+   ✨ Already Matches
+   Verify: https://brandmonkacademy.com/verify/BMAJUNDMMES/Q0506S055
+------------------------------------------------
+Processing: Sudhakar
+   Current ID: BMAJUNDMMES/Q0506S056
+   Target ID : BMAJUNDMMES/Q0506S056
+   ✨ Already Matches
+   Verify: https://brandmonkacademy.com/verify/BMAJUNDMMES/Q0506S056
+------------------------------------------------
+Processing: Gopinath
+   Current ID: BMAJUNDMMES/Q0506S057
+   Target ID : BMAJUNDMMES/Q0506S057
+   ✨ Already Matches
+   Verify: https://brandmonkacademy.com/verify/BMAJUNDMMES/Q0506S057
+------------------------------------------------
+Processing: Niranjan
+   Current ID: BMAJUNDMMES/Q0506S058
+   Target ID : BMAJUNDMMES/Q0506S058
+   ✨ Already Matches
+   Verify: https://brandmonkacademy.com/verify/BMAJUNDMMES/Q0506S058
+------------------------------------------------
+Processing: Sathishkumar M
+   Current ID: BMAJUNDMMES/Q0506S059
+   Target ID : BMAJUNDMMES/Q0506S059
+   ✨ Already Matches
+   Verify: https://brandmonkacademy.com/verify/BMAJUNDMMES/Q0506S059
+------------------------------------------------
+Processing: priyaa.A
+   Current ID: BMAJUNDMMES/Q0506S060
+   Target ID : BMAJUNDMMES/Q0506S060
+   ✨ Already Matches
+   Verify: https://brandmonkacademy.com/verify/BMAJUNDMMES/Q0506S060
+------------------------------------------------
+Processing: Swetha N
+   Current ID: BMAJUNDMMES/Q0506S061
+   Target ID : BMAJUNDMMES/Q0506S061
+   ✨ Already Matches
+   Verify: https://brandmonkacademy.com/verify/BMAJUNDMMES/Q0506S061
+------------------------------------------------
+
+Total Digital Marketing Students: 64
+Done.

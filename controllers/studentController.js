@@ -236,33 +236,63 @@ const markInstagramFollowed = async (req, res) => {
 // @route   GET /api/students/:id
 // @access  Public
 const getStudentById = async (req, res) => {
-  console.log("GetStudentById Request ID:", req.params.id);
+  const paramId = req.params.id;
+  console.log("GetStudentById Request ID:", paramId);
   try {
     let student;
+    let source = 'webinar'; // 'webinar' (Student) or 'course' (CourseStudent)
     
-    // Try finding by certificateId first (most likely for QR scans)
-    student = await Student.findOne({ certificateId: req.params.id });
+    // 1. Try finding by certificateId in Student model (Webinars)
+    student = await Student.findOne({ certificateId: paramId });
 
-    // If not found, and it looks like a Mongo ID, try that
-    if (!student && req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
-        student = await Student.findById(req.params.id);
+    // 2. If not found, try CourseStudent model (Courses)
+    if (!student) {
+      // Need to include CourseStudent model
+      const CourseStudent = require('../models/CourseStudent');
+      student = await CourseStudent.findOne({ certificateId: paramId });
+      if (student) source = 'course';
+    }
+
+    // 3. If not found, and it looks like a Mongo ID, try both
+    if (!student && paramId.match(/^[0-9a-fA-F]{24}$/)) {
+        student = await Student.findById(paramId);
+        if (!student) {
+           const CourseStudent = require('../models/CourseStudent');
+           student = await CourseStudent.findById(paramId);
+           if (student) source = 'course';
+        } else {
+           source = 'webinar';
+        }
     }
 
     if (student) {
-      res.json({
-        success: true,
-        student: {
+      // Normalize data for frontend
+      const responseData = {
           _id: student._id,
           name: student.name,
-          email: student.email,
-          webinarName: student.webinarName,
           certificateId: student.certificateId,
-          profession: student.profession,
-          location: student.location,
-          certificateType: student.certificateType,
           dateOfRegistration: student.dateOfRegistration || student.createdAt,
           isEligible: student.isEligible || false
-        }
+      };
+
+      if (source === 'webinar') {
+        responseData.email = student.email;
+        responseData.webinarName = student.webinarName;
+        responseData.profession = student.profession;
+        responseData.location = student.location;
+        responseData.certificateType = student.certificateType;
+      } else {
+        // Map CourseStudent fields to match expected format
+        responseData.email = ''; // Not stored for course students
+        responseData.webinarName = student.courseName; // Reuse field
+        responseData.profession = 'Student'; // Default
+        responseData.location = 'Brand Monk Academy'; // Default
+        responseData.certificateType = 'Course Certificate';
+      }
+
+      res.json({
+        success: true,
+        student: responseData
       });
     } else {
       res.status(404).json({ 
