@@ -2,7 +2,11 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const CourseStudent = require('../models/CourseStudent');
 
+const dotenv = require('dotenv');
+
 dotenv.config();
+
+const MONGO_URI = 'mongodb+srv://mukilan:mukilan@cluster0.c5yb5jt.mongodb.net/brandmonk_academy?appName=Cluster0';
 
 // Mapping of student names to their correct certificate IDs for Digital Marketing
 const studentCertificateMapping = [
@@ -91,7 +95,7 @@ const studentCertificateMapping = [
   { name: "L.KRISHNAMOORTHY", certificateId: "BMAJULDMMES/Q0706S359" },
   { name: "K.KAVYA", certificateId: "BMAJUNDMMES/Q0706S305" },
   { name: "YUVARAJ K", certificateId: "BMAJULDMMES/Q0706S352" },
-  { name: "BALACHANDAR D", certificateId: "BMAJULDMMES/Q0706S374" },
+  { name: "BALACHANDAR D", certificateId: "BMAJULDMMES/Q07065374" },
   { name: "KARTHIKEYAN M", certificateId: "BMAMARDMMES/Q0706S223" },
   { name: "GAYATHRI V", certificateId: "BMAOCTDMMES/Q0706S501" },
   { name: "M.SNEHA", certificateId: "BMASEPDMMES/Q0706S422" },
@@ -165,7 +169,7 @@ function normalizeName(name) {
 async function updateDMCertificateIds() {
   try {
     console.log('🔌 Connecting to MongoDB...');
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(MONGO_URI);
     console.log('✅ Connected to MongoDB');
 
     // Get all Digital Marketing students

@@ -22,6 +22,12 @@ const studentsToAdd = [
     certificateId: 'BMAJANDMMES/Q04065332',
     courseSlug: 'digital-marketing',
     courseName: 'Digital Marketing'
+  },
+  {
+    name: "S.SENTAMILSELVI",
+    certificateId: "BMAJANDMMES/Q0406S776",
+    courseSlug: 'digital-marketing',
+    courseName: 'Digital Marketing'
   }
 ];
 
