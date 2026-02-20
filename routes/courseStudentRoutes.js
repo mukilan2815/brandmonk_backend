@@ -73,12 +73,21 @@ router.get('/:id', async (req, res) => {
   try {
     let student;
     
-    // Try finding by certificateId first (for QR scans)
-    student = await CourseStudent.findOne({ certificateId: req.params.id });
+    // Decode the ID - the frontend double-encodes to preserve slashes,
+    // so we must decode once here to get the actual certificate ID
+    const rawId = req.params.id;
+    const decodedId = decodeURIComponent(rawId);
+
+    // Try finding by certificateId (decoded first, then raw as fallback)
+    student = await CourseStudent.findOne({ certificateId: decodedId });
+
+    if (!student && decodedId !== rawId) {
+      student = await CourseStudent.findOne({ certificateId: rawId });
+    }
 
     // If not found and it looks like a Mongo ID, try that
-    if (!student && req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
-      student = await CourseStudent.findById(req.params.id);
+    if (!student && rawId.match(/^[0-9a-fA-F]{24}$/)) {
+      student = await CourseStudent.findById(rawId);
     }
 
     if (student) {
