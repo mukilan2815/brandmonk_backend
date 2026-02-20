@@ -95,7 +95,7 @@ const studentCertificateMapping = [
   { name: "L.KRISHNAMOORTHY", certificateId: "BMAJULDMMES/Q0706S359" },
   { name: "K.KAVYA", certificateId: "BMAJUNDMMES/Q0706S305" },
   { name: "YUVARAJ K", certificateId: "BMAJULDMMES/Q0706S352" },
-  { name: "BALACHANDAR D", certificateId: "BMAJULDMMES/Q07065374" },
+  { name: "BALACHANDAR D", certificateId: "BMAJULDMMES/Q0706S374" },
   { name: "KARTHIKEYAN M", certificateId: "BMAMARDMMES/Q0706S223" },
   { name: "GAYATHRI V", certificateId: "BMAOCTDMMES/Q0706S501" },
   { name: "M.SNEHA", certificateId: "BMASEPDMMES/Q0706S422" },
