@@ -34,6 +34,50 @@ const MANUAL_CERTIFICATE_REGISTRY = {
   'BMAJUNVEMES/Q1401S018': { name: 'Shalini.K', courseName: 'Video Editing', courseSlug: 'video-editing' }
 };
 
+const findCourseStudentForCertificate = async (rawId, decodedId) => {
+  let student = await CourseStudent.findOne({ certificateId: decodedId });
+
+  if (!student && decodedId !== rawId) {
+    student = await CourseStudent.findOne({ certificateId: rawId });
+  }
+
+  const manualStudent = MANUAL_CERTIFICATE_REGISTRY[decodedId] || MANUAL_CERTIFICATE_REGISTRY[rawId];
+
+  if (!student && rawId.match(/^[0-9a-fA-F]{24}$/)) {
+    student = await CourseStudent.findById(rawId);
+  }
+
+  if (!student && !manualStudent) {
+    return null;
+  }
+
+  const responseStudent = student
+    ? {
+        _id: student._id,
+        name: student.name,
+        courseName: student.courseName,
+        courseSlug: student.courseSlug,
+        certificateId: student.certificateId,
+        isEligible: student.isEligible,
+        dateOfRegistration: student.dateOfRegistration || student.createdAt
+      }
+    : {
+        _id: `manual-${(decodedId || rawId).replace(/[^a-zA-Z0-9]/g, '')}`,
+        name: manualStudent.name,
+        courseName: manualStudent.courseName,
+        courseSlug: manualStudent.courseSlug,
+        certificateId: decodedId || rawId,
+        isEligible: true,
+        dateOfRegistration: FIXED_CERTIFICATE_ISSUE_DATE
+      };
+
+  if (MANUAL_CERTIFICATE_REGISTRY[responseStudent.certificateId]) {
+    responseStudent.dateOfRegistration = FIXED_CERTIFICATE_ISSUE_DATE;
+  }
+
+  return responseStudent;
+};
+
 // @desc    Get all course students
 // @route   GET /api/course-students
 // @access  Private (Admin only)
@@ -103,53 +147,13 @@ router.get('/course/:slug', async (req, res) => {
 // @access  Public (for QR verification)
 router.get('/:id', async (req, res) => {
   try {
-    let student;
-    
     // Decode the ID - the frontend double-encodes to preserve slashes,
     // so we must decode once here to get the actual certificate ID
     const rawId = req.params.id;
     const decodedId = decodeURIComponent(rawId);
+    const responseStudent = await findCourseStudentForCertificate(rawId, decodedId);
 
-    // Try finding by certificateId (decoded first, then raw as fallback)
-    student = await CourseStudent.findOne({ certificateId: decodedId });
-
-    if (!student && decodedId !== rawId) {
-      student = await CourseStudent.findOne({ certificateId: rawId });
-    }
-
-    // Fallback registry for manually generated certificates.
-    const manualStudent = MANUAL_CERTIFICATE_REGISTRY[decodedId] || MANUAL_CERTIFICATE_REGISTRY[rawId];
-
-    // If not found and it looks like a Mongo ID, try that
-    if (!student && rawId.match(/^[0-9a-fA-F]{24}$/)) {
-      student = await CourseStudent.findById(rawId);
-    }
-
-    if (student || manualStudent) {
-      const responseStudent = student
-        ? {
-            _id: student._id,
-            name: student.name,
-            courseName: student.courseName,
-            courseSlug: student.courseSlug,
-            certificateId: student.certificateId,
-            isEligible: student.isEligible,
-            dateOfRegistration: student.dateOfRegistration || student.createdAt
-          }
-        : {
-            _id: `manual-${(decodedId || rawId).replace(/[^a-zA-Z0-9]/g, '')}`,
-            name: manualStudent.name,
-            courseName: manualStudent.courseName,
-            courseSlug: manualStudent.courseSlug,
-            certificateId: decodedId || rawId,
-            isEligible: true,
-            dateOfRegistration: FIXED_CERTIFICATE_ISSUE_DATE
-          };
-
-      // For this requested set, enforce a fixed issue date.
-      if (MANUAL_CERTIFICATE_REGISTRY[responseStudent.certificateId]) {
-        responseStudent.dateOfRegistration = FIXED_CERTIFICATE_ISSUE_DATE;
-      }
+    if (responseStudent) {
 
       res.json({
         success: true,
@@ -166,6 +170,35 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Server Error' 
+    });
+  }
+});
+
+// @desc    Get single course student by split certificate ID
+// @route   GET /api/course-students/:idPrefix/:idSuffix
+// @access  Public (for QR verification)
+router.get('/:idPrefix/:idSuffix', async (req, res) => {
+  try {
+    const rawId = `${req.params.idPrefix}/${req.params.idSuffix}`;
+    const decodedId = decodeURIComponent(rawId);
+    const responseStudent = await findCourseStudentForCertificate(rawId, decodedId);
+
+    if (responseStudent) {
+      res.json({
+        success: true,
+        student: responseStudent
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'Certificate not found.'
+      });
+    }
+  } catch (error) {
+    console.error('GetCourseStudentBySplitId Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
     });
   }
 });
