@@ -10,7 +10,7 @@ const students = [
   'Sudhakar',
   'Gopinath',
   'Niranjan',
-  'Sathishkumar M',
+  'Satheeskumar S',
   'priyaa.A',
   'Swetha N'
 ];

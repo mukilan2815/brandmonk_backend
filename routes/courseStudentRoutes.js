@@ -2,6 +2,38 @@ const express = require('express');
 const router = express.Router();
 const CourseStudent = require('../models/CourseStudent');
 
+const FIXED_CERTIFICATE_ISSUE_DATE = new Date('2026-01-12T00:00:00.000Z');
+
+const MANUAL_CERTIFICATE_REGISTRY = {
+  'BMAJUNDMMES/Q0506S021': { name: 'Amuthamalar.R', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S054': { name: 'Ashiquah S', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S063': { name: 'Yuvarani.P', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S064': { name: 'A. Sherwin rose', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S065': { name: 'T. Pandurangan', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S066': { name: 'Lavanya N', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S067': { name: 'N BALAMURUGAN', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S068': { name: 'Kavinsanjay M V', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S069': { name: 'Antony Xavier Prasath R', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S070': { name: 'M Saranraj', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S071': { name: 'Praveen Kumar P', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S072': { name: 'Yuvarekha A', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S073': { name: 'Jabez Sahaya Selvan', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S074': { name: 'G.tharun', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S075': { name: 'Anbarasy J', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S076': { name: 'HariPriya P', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S077': { name: 'Shanmugam P', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S078': { name: 'Premalatha D', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S079': { name: 'Suganya C', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S080': { name: 'S. Anitha Preethi', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNDMMES/Q0506S081': { name: 'Hari pradheesh', courseName: 'Digital Marketing', courseSlug: 'digital-marketing' },
+  'BMAJUNVEMES/Q1401S013': { name: 'S.MUTHUKUMAR', courseName: 'Video Editing', courseSlug: 'video-editing' },
+  'BMAJUNVEMES/Q1401S014': { name: 'SURESH P', courseName: 'Video Editing', courseSlug: 'video-editing' },
+  'BMAJUNVEMES/Q1401S015': { name: 'Karthick E', courseName: 'Video Editing', courseSlug: 'video-editing' },
+  'BMAJUNVEMES/Q1401S016': { name: 'K Sowmiya', courseName: 'Video Editing', courseSlug: 'video-editing' },
+  'BMAJUNVEMES/Q1401S017': { name: 'Lokesh S', courseName: 'Video Editing', courseSlug: 'video-editing' },
+  'BMAJUNVEMES/Q1401S018': { name: 'Shalini.K', courseName: 'Video Editing', courseSlug: 'video-editing' }
+};
+
 // @desc    Get all course students
 // @route   GET /api/course-students
 // @access  Private (Admin only)
@@ -85,23 +117,43 @@ router.get('/:id', async (req, res) => {
       student = await CourseStudent.findOne({ certificateId: rawId });
     }
 
+    // Fallback registry for manually generated certificates.
+    const manualStudent = MANUAL_CERTIFICATE_REGISTRY[decodedId] || MANUAL_CERTIFICATE_REGISTRY[rawId];
+
     // If not found and it looks like a Mongo ID, try that
     if (!student && rawId.match(/^[0-9a-fA-F]{24}$/)) {
       student = await CourseStudent.findById(rawId);
     }
 
-    if (student) {
+    if (student || manualStudent) {
+      const responseStudent = student
+        ? {
+            _id: student._id,
+            name: student.name,
+            courseName: student.courseName,
+            courseSlug: student.courseSlug,
+            certificateId: student.certificateId,
+            isEligible: student.isEligible,
+            dateOfRegistration: student.dateOfRegistration || student.createdAt
+          }
+        : {
+            _id: `manual-${(decodedId || rawId).replace(/[^a-zA-Z0-9]/g, '')}`,
+            name: manualStudent.name,
+            courseName: manualStudent.courseName,
+            courseSlug: manualStudent.courseSlug,
+            certificateId: decodedId || rawId,
+            isEligible: true,
+            dateOfRegistration: FIXED_CERTIFICATE_ISSUE_DATE
+          };
+
+      // For this requested set, enforce a fixed issue date.
+      if (MANUAL_CERTIFICATE_REGISTRY[responseStudent.certificateId]) {
+        responseStudent.dateOfRegistration = FIXED_CERTIFICATE_ISSUE_DATE;
+      }
+
       res.json({
         success: true,
-        student: {
-          _id: student._id,
-          name: student.name,
-          courseName: student.courseName,
-          courseSlug: student.courseSlug,
-          certificateId: student.certificateId,
-          isEligible: student.isEligible,
-          dateOfRegistration: student.dateOfRegistration || student.createdAt
-        }
+        student: responseStudent
       });
     } else {
       res.status(404).json({ 

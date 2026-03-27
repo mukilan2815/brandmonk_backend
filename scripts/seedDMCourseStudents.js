@@ -33,7 +33,7 @@ const studentNames = [
   'BALAJI R', 'P Jayashri', 'Blessie S', 'Harshni P', 'CHINNA DURAI',
   'Rameezbanu M', 'C. R. ASHOK', 'JAYA SREE', 'PRATHEEBARAN RAMAKRISHNAN',
   'Aravindhan', 'Darice Asina Devi', 'P.Suba', 'R.Sathiyavathi', 'Muralikanth G',
-  'SATHISHKUMAR M', 'Gayathri Selvaraj', 'S.VINOTHINI', 'G.Suganyadevi', 'B. KAMALI',
+  'Satheeskumar S', 'Gayathri Selvaraj', 'S.VINOTHINI', 'G.Suganyadevi', 'B. KAMALI',
   'ASWANI.MS'
 ];
 

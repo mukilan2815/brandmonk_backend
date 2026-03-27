@@ -11,7 +11,7 @@ const studentsToUpdate = [
   'Sudhakar',
   'Gopinath',
   'Niranjan',
-  'Sathishkumar M',
+  'Satheeskumar S',
   'priyaa.A',
   'Swetha N'
 ];

@@ -17,7 +17,7 @@ Highest BMADM ID: 8
 ⏭️ Skipped (Exists): Sudhakar (BMADM0003)
 ⏭️ Skipped (Exists): Gopinath (BMADM0004)
 ⏭️ Skipped (Exists): Niranjan (BMADM0005)
-⏭️ Skipped (Exists): Sathishkumar M (BMADM0006)
+⏭️ Skipped (Exists): Satheeskumar S (BMADM0006)
 ⏭️ Skipped (Exists): priyaa.A (BMADM0007)
 ⏭️ Skipped (Exists): Swetha N (BMADM0008)
 

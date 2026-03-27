@@ -175,8 +175,8 @@ R.Sathiyavathi
 Muralikanth G
 Kuppili Sruthi 
 S.Gayathri
-SATHISHKUMAR M 
-SATHISHKUMAR M 
+Satheeskumar S 
+Satheeskumar S 
 Gayathri Selvaraj 
 Rohith G
 S.VINOTHINI 

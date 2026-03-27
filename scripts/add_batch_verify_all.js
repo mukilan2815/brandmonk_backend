@@ -46,7 +46,7 @@ const newStudents = [
   'Sudhakar',
   'Gopinath',
   'Niranjan',
-  'Sathishkumar M',
+  'Satheeskumar S',
   'priyaa.A',
   'Swetha N'
 ];
