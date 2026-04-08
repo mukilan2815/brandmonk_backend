@@ -8,13 +8,6 @@ const adminRoutes = require('./routes/adminRoutes');
 const webinarRoutes = require('./routes/webinarRoutes');
 const courseStudentRoutes = require('./routes/courseStudentRoutes');
 
-
-
-// Firebase Backup Service
-const { fullSync, getStudentsFromBackup, getWebinarsFromBackup } = require('./services/firebaseBackup');
-const Student = require('./models/Student');
-const Webinar = require('./models/Webinar');
-
 // Load environment variables
 dotenv.config();
 
@@ -26,7 +19,6 @@ console.log('========================================');
 console.log('Port:', process.env.PORT || 5000);
 console.log('MongoDB URI exists:', !!process.env.MONGO_URI);
 console.log('Email configured:', !!process.env.EMAIL_USER);
-console.log('Startup Firebase full sync enabled:', process.env.FIREBASE_STARTUP_SYNC === 'true');
 
 // CORS Configuration
 const corsOptions = {
@@ -46,9 +38,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
-// Explicitly handle preflight requests for all routes
-app.options('*', cors(corsOptions));
 
 // Body Parser Middleware
 app.use(express.json());
@@ -81,59 +70,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Firebase Full Sync Endpoint - Manually trigger backup of all data
-app.post('/api/admin/firebase-sync', async (req, res) => {
-  try {
-    console.log('📦 Manual Firebase sync triggered...');
-    await fullSync(Student, Webinar);
-    res.json({
-      success: true,
-      message: 'Full Firebase sync completed successfully!'
-    });
-  } catch (error) {
-    console.error('Firebase sync error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Firebase sync failed: ' + error.message
-    });
-  }
-});
-
-// Get backup data from Firebase (for recovery if MongoDB is lost)
-app.get('/api/admin/firebase-backup/students', async (req, res) => {
-  try {
-    const students = await getStudentsFromBackup();
-    res.json({
-      success: true,
-      count: students.length,
-      students
-    });
-  } catch (error) {
-    console.error('Get backup error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get backup data: ' + error.message
-    });
-  }
-});
-
-app.get('/api/admin/firebase-backup/webinars', async (req, res) => {
-  try {
-    const webinars = await getWebinarsFromBackup();
-    res.json({
-      success: true,
-      count: webinars.length,
-      webinars
-    });
-  } catch (error) {
-    console.error('Get backup error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get backup data: ' + error.message
-    });
-  }
-});
-
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({ 
@@ -142,10 +78,7 @@ app.get('/', (req, res) => {
       students: '/api/students',
       admin: '/api/admin',
       webinars: '/api/webinars',
-      health: '/api/health',
-      firebaseSync: '/api/admin/firebase-sync (POST)',
-      firebaseBackupStudents: '/api/admin/firebase-backup/students (GET)',
-      firebaseBackupWebinars: '/api/admin/firebase-backup/webinars (GET)'
+      health: '/api/health'
     }
   });
 });
@@ -179,21 +112,6 @@ const startServer = async () => {
       console.log(`✅ Server running on port ${PORT}`);
       console.log(`📍 API: http://localhost:${PORT}`);
       console.log('========================================');
-
-      // Full sync can be expensive; keep it opt-in to avoid OOM on small instances.
-      if (process.env.FIREBASE_STARTUP_SYNC === 'true') {
-        console.log('🔄 Starting initial Firebase backup sync...');
-        setTimeout(async () => {
-          try {
-            await fullSync(Student, Webinar);
-            console.log('✅ Initial Firebase sync completed!');
-          } catch (error) {
-            console.error('⚠️ Initial Firebase sync failed:', error.message);
-          }
-        }, 5000);
-      } else {
-        console.log('⏭️ Skipping startup Firebase full sync (set FIREBASE_STARTUP_SYNC=true to enable)');
-      }
     });
 
   } catch (error) {

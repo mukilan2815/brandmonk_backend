@@ -1,12 +1,7 @@
 const Student = require('../models/Student');
 const Admin = require('../models/Admin');
 const { Resend } = require('resend');
-const { 
-  backupStudent, 
-  deleteStudentBackup, 
-  backupStudentsBatch,
-  logBackupEvent 
-} = require('../services/firebaseBackup');
+
 
 // Admin credentials (in production, use bcrypt and proper auth)
 const ADMIN_CREDENTIALS = {
@@ -237,9 +232,6 @@ const createStudent = async (req, res) => {
     
     console.log("Student saved successfully:", savedStudent._id);
 
-    // Backup to Firebase (fire-and-forget)
-    backupStudent(savedStudent).catch(err => console.error('Firebase backup error:', err.message));
-
     res.status(201).json({
       success: true,
       message: 'Student added successfully!',
@@ -278,9 +270,6 @@ const updateStudent = async (req, res) => {
     const student = await Student.findByIdAndUpdate(studentId, updateData, { new: true });
 
     if (student) {
-      // Backup updated student to Firebase (fire-and-forget)
-      backupStudent(student).catch(err => console.error('Firebase backup error:', err.message));
-      
       res.json({
         success: true,
         message: 'Student updated successfully!',
@@ -312,16 +301,7 @@ const deleteStudent = async (req, res) => {
     const result = await Student.findByIdAndDelete(studentId);
 
     if (result) {
-      // Log deletion event to Firebase but DON'T delete the backup (fire-and-forget)
-      // This keeps historical data even if deleted from MongoDB
-      logBackupEvent('STUDENT_DELETED_FROM_MONGO', {
-        studentId,
-        name: result.name,
-        email: result.email,
-        deletedAt: new Date().toISOString()
-      }).catch(err => console.error('Firebase log error:', err.message));
-      console.log(`\ud83d\udccb Student ${studentId} deleted from MongoDB, backup preserved in Firebase`);
-      
+
       res.json({
         success: true,
         message: 'Student deleted successfully'
@@ -358,9 +338,6 @@ const toggleEligibility = async (req, res) => {
     const student = await Student.findByIdAndUpdate(studentId, updateData, { new: true });
 
     if (student) {
-      // Backup updated student to Firebase (fire-and-forget)
-      backupStudent(student).catch(err => console.error('Firebase backup error:', err.message));
-      
       res.json({
         success: true,
         message: `Certificate eligibility ${isEligible ? 'approved' : 'revoked'}`,
@@ -529,11 +506,6 @@ const sendCertificateEmail = async (req, res) => {
       certificateSent: true,
       certificateSentAt: new Date()
     }, { new: true });
-
-    // Backup updated student to Firebase (fire-and-forget)
-    if (updatedStudent) {
-      backupStudent(updatedStudent).catch(err => console.error('Firebase backup error:', err.message));
-    }
 
     res.json({
       success: true,
@@ -731,9 +703,6 @@ const bulkImportStudents = async (req, res) => {
 
         const student = new Student(studentData);
         const savedStudent = await student.save();
-        
-        // Backup to Firebase (fire-and-forget)
-        backupStudent(savedStudent).catch(err => console.error('Firebase backup error:', err.message));
         
         results.success++;
 

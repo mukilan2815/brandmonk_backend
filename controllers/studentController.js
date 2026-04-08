@@ -1,6 +1,5 @@
 const Student = require('../models/Student');
 const Webinar = require('../models/Webinar');
-const { backupStudent } = require('../services/firebaseBackup');
 
 // Generate certificate ID
 
@@ -114,9 +113,6 @@ const registerStudent = async (req, res) => {
     });
     const savedStudent = await student.save();
     
-    // Backup to Firebase (fire-and-forget)
-    backupStudent(savedStudent).catch(err => console.error('Firebase backup error:', err.message));
-    
     // Update webinar count
     await Webinar.findByIdAndUpdate(webinar._id, {
       $inc: { totalRegistrations: 1 }
@@ -204,9 +200,6 @@ const markInstagramFollowed = async (req, res) => {
     );
 
     if (student) {
-      // Backup updated student to Firebase (fire-and-forget)
-      backupStudent(student).catch(err => console.error('Firebase backup error:', err.message));
-      
       res.json({
         success: true,
         message: 'Instagram verification complete!',

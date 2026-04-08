@@ -1,5 +1,4 @@
 const Webinar = require('../models/Webinar');
-const { backupWebinar, logBackupEvent } = require('../services/firebaseBackup');
 
 // Generate unique slug
 const generateSlug = (name) => {
@@ -59,13 +58,6 @@ const createWebinar = async (req, res) => {
     const webinar = new Webinar(webinarData);
     const savedWebinar = await webinar.save();
     console.log("Webinar saved successfully:", savedWebinar._id);
-    
-    // Backup to Firebase (fire-and-forget, don't block main operation)
-    try {
-      backupWebinar(savedWebinar).catch(err => console.error('Firebase backup error:', err.message));
-    } catch (fbError) {
-      console.error('Firebase backup invocation error:', fbError);
-    }
     
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const registrationLink = `${frontendUrl}/register/${savedWebinar.slug}`;
@@ -228,9 +220,6 @@ const toggleWebinarStatus = async (req, res) => {
       webinar.isActive = !webinar.isActive;
       await webinar.save();
       
-      // Backup updated webinar to Firebase (fire-and-forget)
-      backupWebinar(webinar).catch(err => console.error('Firebase backup error:', err.message));
-      
       res.json({
         success: true,
         message: `Webinar ${webinar.isActive ? 'activated' : 'deactivated'}`,
@@ -262,15 +251,6 @@ const deleteWebinar = async (req, res) => {
     const result = await Webinar.findByIdAndDelete(webinarId);
 
     if (result) {
-      // Log deletion event to Firebase but DON'T delete the backup (fire-and-forget)
-      logBackupEvent('WEBINAR_DELETED_FROM_MONGO', {
-        webinarId,
-        name: result.name,
-        slug: result.slug,
-        deletedAt: new Date().toISOString()
-      }).catch(err => console.error('Firebase log error:', err.message));
-      console.log(`📋 Webinar ${webinarId} deleted from MongoDB, backup preserved in Firebase`);
-      
       res.json({
         success: true,
         message: 'Webinar deleted successfully'
@@ -310,9 +290,6 @@ const updateWebinar = async (req, res) => {
     const webinar = await Webinar.findByIdAndUpdate(webinarId, updateData, { new: true });
 
     if (webinar) {
-      // Backup updated webinar to Firebase (fire-and-forget)
-      backupWebinar(webinar).catch(err => console.error('Firebase backup error:', err.message));
-      
       res.json({
         success: true,
         message: 'Webinar updated successfully!',
