@@ -26,6 +26,7 @@ console.log('========================================');
 console.log('Port:', process.env.PORT || 5000);
 console.log('MongoDB URI exists:', !!process.env.MONGO_URI);
 console.log('Email configured:', !!process.env.EMAIL_USER);
+console.log('Startup Firebase full sync enabled:', process.env.FIREBASE_STARTUP_SYNC === 'true');
 
 // CORS Configuration
 const corsOptions = {
@@ -45,6 +46,9 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Explicitly handle preflight requests for all routes
+app.options('*', cors(corsOptions));
 
 // Body Parser Middleware
 app.use(express.json());
@@ -175,17 +179,21 @@ const startServer = async () => {
       console.log(`✅ Server running on port ${PORT}`);
       console.log(`📍 API: http://localhost:${PORT}`);
       console.log('========================================');
-      
-      // Perform initial Firebase sync after server starts
-      console.log('🔄 Starting initial Firebase backup sync...');
-      setTimeout(async () => {
-        try {
-          await fullSync(Student, Webinar);
-          console.log('✅ Initial Firebase sync completed!');
-        } catch (error) {
-          console.error('⚠️ Initial Firebase sync failed:', error.message);
-        }
-      }, 5000); 
+
+      // Full sync can be expensive; keep it opt-in to avoid OOM on small instances.
+      if (process.env.FIREBASE_STARTUP_SYNC === 'true') {
+        console.log('🔄 Starting initial Firebase backup sync...');
+        setTimeout(async () => {
+          try {
+            await fullSync(Student, Webinar);
+            console.log('✅ Initial Firebase sync completed!');
+          } catch (error) {
+            console.error('⚠️ Initial Firebase sync failed:', error.message);
+          }
+        }, 5000);
+      } else {
+        console.log('⏭️ Skipping startup Firebase full sync (set FIREBASE_STARTUP_SYNC=true to enable)');
+      }
     });
 
   } catch (error) {

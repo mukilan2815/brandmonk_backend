@@ -212,16 +212,56 @@ const fullSync = async (Student, Webinar) => {
   console.log('🔄 Starting Firebase sync...');
   
   try {
-    const students = await Student.find({});
-    if (students.length > 0) {
-      await backupStudentsBatch(students);
-      console.log(`📦 Synced ${students.length} students`);
+    const BATCH_SIZE = 300;
+
+    // Stream students in chunks instead of loading the whole collection into memory.
+    let studentBatch = [];
+    let studentCount = 0;
+    const studentCursor = Student.find({}).lean().cursor();
+
+    for await (const student of studentCursor) {
+      studentBatch.push(student);
+
+      if (studentBatch.length >= BATCH_SIZE) {
+        await backupStudentsBatch(studentBatch);
+        studentCount += studentBatch.length;
+        console.log(`📦 Synced ${studentCount} students so far`);
+        studentBatch = [];
+      }
     }
-    
-    const webinars = await Webinar.find({});
-    if (webinars.length > 0) {
-      await backupWebinarsBatch(webinars);
-      console.log(`📦 Synced ${webinars.length} webinars`);
+
+    if (studentBatch.length > 0) {
+      await backupStudentsBatch(studentBatch);
+      studentCount += studentBatch.length;
+    }
+
+    if (studentCount > 0) {
+      console.log(`📦 Synced ${studentCount} students`);
+    }
+
+    // Webinars are usually smaller, but still process in chunks for safety.
+    let webinarBatch = [];
+    let webinarCount = 0;
+    const webinarCursor = Webinar.find({}).lean().cursor();
+
+    for await (const webinar of webinarCursor) {
+      webinarBatch.push(webinar);
+
+      if (webinarBatch.length >= BATCH_SIZE) {
+        await backupWebinarsBatch(webinarBatch);
+        webinarCount += webinarBatch.length;
+        console.log(`📦 Synced ${webinarCount} webinars so far`);
+        webinarBatch = [];
+      }
+    }
+
+    if (webinarBatch.length > 0) {
+      await backupWebinarsBatch(webinarBatch);
+      webinarCount += webinarBatch.length;
+    }
+
+    if (webinarCount > 0) {
+      console.log(`📦 Synced ${webinarCount} webinars`);
     }
     
     console.log('✅ Firebase sync complete!');
