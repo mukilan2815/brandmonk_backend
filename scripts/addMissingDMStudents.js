@@ -1,51 +1,71 @@
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
 const CourseStudent = require('../models/CourseStudent');
 
-dotenv.config();
+const MONGO_URI = 'mongodb+srv://mukilan:mukilan@cluster0.c5yb5jt.mongodb.net/brandmonk_academy?appName=Cluster0';
 
-// Missing students that need to be added
-const missingStudents = [
-  { name: "ASWANI. MS", certificateId: "BMAJANDMMES/Q0406S695" },
-  { name: "VARUN MOGLI", certificateId: "BMAJANDMMES/Q0406S213" },
-  { name: "JANANI D", certificateId: "BMAJANDMMES/Q0406S808" },
-  { name: "SARULATHA M", certificateId: "BMAJANDMMES/Q0406S950" },
-  { name: "K.GEETHA", certificateId: "BMAJANDMMES/Q0406S161" },
-  { name: "RUTH SALLY GOMEZ", certificateId: "BMAJANDMMES/Q0406S350" },
-  { name: "RABIN AROKIANATHAN", certificateId: "BMAJANDMMES/Q0406S158" },
-  { name: "LEO. A", certificateId: "BMAJANDMMES/Q0406S657" },
-  { name: "FRANCIS J", certificateId: "BMAJANDMMES/Q0406S691" },
-  { name: "SAVARI ARUN U", certificateId: "BMAJANDMMES/Q0406S392" },
-  { name: "ABINAYA T", certificateId: "BMAJANDMMES/Q0406S175" },
-  { name: "M.ISHWARYA", certificateId: "BMAJANDMMES/Q0406S972" },
-  { name: "YUVAREKHA A", certificateId: "BMAJANDMMES/Q0406S288" },
-  { name: "S RAGUL", certificateId: "BMAJANDMMES/Q0406S908" },
-  { name: "RAMSANKAR", certificateId: "BMAJANDMMES/Q0406S442" }
+// Mapping of student names to their correct certificate IDs for Digital Marketing
+const studentCertificateMapping = [
+  { name: "P JAYASHRI", certificateId: "BMASEPDMMES/Q0706S414" },
+  { name: "BLESSIE S", certificateId: "BMAJULDMMES/Q0706S380" },
+  { name: "HARSHNI P", certificateId: "BMASEPDMMES/Q0706S413" }
 ];
+
+function normalizeName(name) {
+  return name
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .replace(/\./g, '')
+    .replace(/,/g, '');
+}
 
 async function addMissingDMStudents() {
   try {
     console.log('🔌 Connecting to MongoDB...');
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(MONGO_URI);
     console.log('✅ Connected to MongoDB\n');
+
+    const allStudents = await CourseStudent.find({
+      courseSlug: 'digital-marketing'
+    });
+
+    console.log(`📊 Currently have ${allStudents.length} Digital Marketing students in database\n`);
 
     let added = 0;
     let skipped = 0;
+    const missingStudents = [];
 
-    for (const student of missingStudents) {
-      try {
-        // Check if student already exists by certificate ID
-        const existing = await CourseStudent.findOne({ 
-          certificateId: student.certificateId 
+    for (const mapping of studentCertificateMapping) {
+      const normalizedMappingName = normalizeName(mapping.name);
+
+      let exists = allStudents.find(s =>
+        normalizeName(s.name) === normalizedMappingName
+      );
+
+      if (!exists) {
+        exists = allStudents.find(s => {
+          const normalizedDbName = normalizeName(s.name);
+          return normalizedDbName.includes(normalizedMappingName) ||
+                 normalizedMappingName.includes(normalizedDbName);
         });
+      }
 
-        if (existing) {
-          console.log(`⏭️  Skipped (exists): ${student.name} (${student.certificateId})`);
-          skipped++;
-        } else {
-          // Add new student
+      if (!exists) {
+        missingStudents.push(mapping);
+      } else {
+        skipped++;
+      }
+    }
+
+    console.log(`📋 Missing students that need to be added: ${missingStudents.length}\n`);
+
+    if (missingStudents.length > 0) {
+      console.log('Adding missing students...\n');
+
+      for (const student of missingStudents) {
+        try {
           const newStudent = new CourseStudent({
-            name: student.name.trim(),
+            name: student.name,
             courseName: 'Digital Marketing',
             courseSlug: 'digital-marketing',
             certificateId: student.certificateId,
@@ -55,11 +75,15 @@ async function addMissingDMStudents() {
           });
 
           await newStudent.save();
-          console.log(`✅ Added: ${student.name} (${student.certificateId})`);
+          console.log(`✅ Added: ${student.name} → ${student.certificateId}`);
           added++;
+        } catch (error) {
+          if (error.code === 11000) {
+            console.log(`⚠️  Skipped: ${student.name} (Certificate ID already exists)`);
+          } else {
+            console.log(`❌ Error adding ${student.name}: ${error.message}`);
+          }
         }
-      } catch (err) {
-        console.error(`❌ Error processing ${student.name}:`, err.message);
       }
     }
 
@@ -67,18 +91,25 @@ async function addMissingDMStudents() {
     console.log('📊 SUMMARY');
     console.log('========================================');
     console.log(`✅ Added: ${added}`);
-    console.log(`⏭️  Skipped: ${skipped}`);
-    console.log(`📝 Total Processed: ${missingStudents.length}`);
+    console.log(`⏭️  Skipped (already exists): ${skipped}`);
     console.log('========================================\n');
 
-    // Verify final count
-    const finalCount = await CourseStudent.countDocuments({ 
-      courseSlug: 'digital-marketing' 
+    console.log('🔬 Verifying P JAYASHRI...');
+    const pJayashri = await CourseStudent.findOne({
+      certificateId: 'BMASEPDMMES/Q0706S414'
     });
-    console.log(`✅ Total Digital Marketing students: ${finalCount}\n`);
+
+    if (pJayashri) {
+      console.log(`✅ P JAYASHRI is now in the database!`);
+      console.log(`   - Name: ${pJayashri.name}`);
+      console.log(`   - Certificate ID: ${pJayashri.certificateId}`);
+      console.log(`   - Eligible: ${pJayashri.isEligible}\n`);
+    } else {
+      console.log(`❌ P JAYASHRI still not found\n`);
+    }
 
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Error:', error.message);
   } finally {
     await mongoose.connection.close();
     console.log('🔌 MongoDB connection closed');

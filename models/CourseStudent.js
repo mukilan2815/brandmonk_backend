@@ -19,15 +19,34 @@ const courseStudentSchema = mongoose.Schema({
   certificateId: {
     type: String,
     unique: true,
-    required: true
+    required: true,
+    index: true
+  },
+  phoneNumber: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  email: {
+    type: String,
+    trim: true,
+    default: null,
+    lowercase: true
+  },
+  batch: {
+    type: String,
+    trim: true,
+    default: null
   },
   isEligible: {
     type: Boolean,
-    default: true
+    default: true,
+    index: true
   },
   certificateSent: {
     type: Boolean,
-    default: false
+    default: false,
+    index: true
   },
   certificateSentAt: {
     type: Date,
@@ -35,11 +54,18 @@ const courseStudentSchema = mongoose.Schema({
   },
   dateOfRegistration: {
     type: Date,
-    default: Date.now
+    default: Date.now,
+    index: true
   }
 }, {
   timestamps: true
 });
+
+// Compound index for finding students by course
+courseStudentSchema.index({ courseSlug: 1, createdAt: -1 });
+
+// Compound index for finding eligible students
+courseStudentSchema.index({ courseSlug: 1, isEligible: 1 });
 
 const CourseStudent = mongoose.model('CourseStudent', courseStudentSchema);
 

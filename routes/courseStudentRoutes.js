@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const CourseStudent = require('../models/CourseStudent');
+const CertificateService = require('../services/certificateService');
 
 const FIXED_CERTIFICATE_ISSUE_DATE = new Date('2026-01-12T00:00:00.000Z');
 
@@ -77,6 +78,73 @@ const findCourseStudentForCertificate = async (rawId, decodedId) => {
 
   return responseStudent;
 };
+
+// @desc    Bulk generate certificates for students
+// @route   POST /api/course-students/bulk/generate
+// @access  Private (Admin only)
+router.post('/bulk/generate', async (req, res) => {
+  const { students } = req.body;
+
+  if (!students || !Array.isArray(students) || students.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Students array is required and must not be empty'
+    });
+  }
+
+  try {
+    const results = await CertificateService.bulkCreateCourseStudents(students);
+
+    res.json({
+      success: true,
+      message: `Processed ${results.totalProcessed} students`,
+      results: {
+        created: results.success.length,
+        skipped: results.skipped.length,
+        failed: results.failed.length,
+        details: {
+          success: results.success,
+          skipped: results.skipped,
+          failed: results.failed
+        }
+      }
+    });
+  } catch (error) {
+    console.error("BulkGenerateCertificates Error:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process bulk certificate generation'
+    });
+  }
+});
+
+// @desc    Get certificate verification data
+// @route   GET /api/course-students/verify/:certificateId
+// @access  Public (for QR code verification)
+router.get('/verify/:certificateId', async (req, res) => {
+  try {
+    const verificationData = await CertificateService.getVerificationData(req.params.certificateId);
+
+    if (verificationData) {
+      res.json({
+        success: true,
+        certificate: verificationData,
+        verifiedAt: new Date().toISOString()
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'Certificate not found'
+      });
+    }
+  } catch (error) {
+    console.error("VerifyCertificate Error:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Error verifying certificate'
+    });
+  }
+});
 
 // @desc    Get all course students
 // @route   GET /api/course-students
@@ -270,6 +338,76 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete course student'
+    });
+  }
+});
+
+// @desc    Update certificate eligibility
+// @route   PATCH /api/course-students/eligibility/:certificateId
+// @access  Private (Admin only)
+router.patch('/eligibility/:certificateId', async (req, res) => {
+  const { isEligible } = req.body;
+
+  if (typeof isEligible !== 'boolean') {
+    return res.status(400).json({
+      success: false,
+      message: 'isEligible must be a boolean'
+    });
+  }
+
+  try {
+    const updated = await CertificateService.updateEligibility(
+      req.params.certificateId,
+      isEligible
+    );
+
+    if (updated) {
+      res.json({
+        success: true,
+        message: 'Certificate eligibility updated',
+        student: updated
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'Certificate not found'
+      });
+    }
+  } catch (error) {
+    console.error("UpdateEligibility Error:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update eligibility'
+    });
+  }
+});
+
+// @desc    Mark certificate as sent
+// @route   PATCH /api/course-students/mark-sent/:certificateId
+// @access  Private (Admin only)
+router.patch('/mark-sent/:certificateId', async (req, res) => {
+  try {
+    const updated = await CertificateService.markCertificateAsSent(
+      req.params.certificateId
+    );
+
+    if (updated) {
+      res.json({
+        success: true,
+        message: 'Certificate marked as sent',
+        student: updated
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'Certificate not found'
+      });
+    }
+  } catch (error) {
+    console.error("MarkCertificateAsSent Error:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark certificate as sent'
     });
   }
 });
