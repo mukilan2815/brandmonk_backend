@@ -32,7 +32,8 @@ const MANUAL_CERTIFICATE_REGISTRY = {
   'BMAJUNVEMES/Q1401S015': { name: 'Karthick E', courseName: 'Video Editing', courseSlug: 'video-editing' },
   'BMAJUNVEMES/Q1401S016': { name: 'K Sowmiya', courseName: 'Video Editing', courseSlug: 'video-editing' },
   'BMAJUNVEMES/Q1401S017': { name: 'Lokesh S', courseName: 'Video Editing', courseSlug: 'video-editing' },
-  'BMAJUNVEMES/Q1401S018': { name: 'Shalini.K', courseName: 'Video Editing', courseSlug: 'video-editing' }
+  'BMAJUNVEMES/Q1401S018': { name: 'Shalini.K', courseName: 'Video Editing', courseSlug: 'video-editing' },
+  'BMAJUNVEMES/Q1401S024': { name: 'Deenadhayalan K', courseName: 'Video Editing', courseSlug: 'video-editing' }
 };
 
 const findCourseStudentForCertificate = async (rawId, decodedId) => {
@@ -123,7 +124,32 @@ router.post('/bulk/generate', async (req, res) => {
 // @access  Public (for QR code verification)
 router.get('/verify/:certificateId', async (req, res) => {
   try {
-    const verificationData = await CertificateService.getVerificationData(req.params.certificateId);
+    const rawId = req.params.certificateId;
+    const decodedId = decodeURIComponent(rawId);
+    let verificationData = await CertificateService.getVerificationData(decodedId);
+
+    if (!verificationData && decodedId !== rawId) {
+      verificationData = await CertificateService.getVerificationData(rawId);
+    }
+
+    if (!verificationData) {
+      const manualStudent = MANUAL_CERTIFICATE_REGISTRY[decodedId] || MANUAL_CERTIFICATE_REGISTRY[rawId];
+      if (manualStudent) {
+        verificationData = {
+          _id: `manual-${(decodedId || rawId).replace(/[^a-zA-Z0-9]/g, '')}`,
+          name: manualStudent.name,
+          courseName: manualStudent.courseName,
+          courseSlug: manualStudent.courseSlug,
+          certificateId: decodedId || rawId,
+          isEligible: true,
+          dateOfRegistration: FIXED_CERTIFICATE_ISSUE_DATE,
+          batch: null,
+          email: null,
+          certificateSent: true,
+          certificateSentAt: FIXED_CERTIFICATE_ISSUE_DATE
+        };
+      }
+    }
 
     if (verificationData) {
       res.json({
